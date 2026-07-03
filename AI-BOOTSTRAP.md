@@ -19,7 +19,7 @@
 **第三步 · 安装套件（落地到项目）**
 - `CLAUDE.template.md` 复制到**项目根目录**改名 `CLAUDE.md`，替换所有〈尖括号〉，删掉不装的层的小节。
 - `docs/` 模板复制进项目 `docs/` 去后缀（不装还原层就跳过 manifest / ledger / profile 三件）。
-- `tools/` **整目录**原样复制进项目 `tools/`；按第二步的装配决策改 `tools/run-checks.js` 顶部的 `INSTALLED_LAYERS`（层开关单一真源，kit-doctor 也读它）——聚合入口只跑启用层，未启用层的 guard 文件留着不会被误跑。kit 的 `package.json` scripts（check / doctor）合入项目。
+- `tools/` **整目录**原样复制进项目 `tools/`；按第二步的装配决策在项目 `docs/design-spec/config.json` 配 `kit.layers`（模板 `docs/config.template.json`；层开关单一真源，run-checks / kit-doctor / 各 guard 同读，没有 config 时回退默认 `['base']`）——聚合入口只跑启用层，未启用层的 guard 文件留着不会被误跑。kit 的 `package.json` scripts（check / doctor）合入项目。
 - **逐个打开 guard 顶部「配置」区按本项目改**：扫描目录、尺寸档集、图标源写法、i18n 运行时路径、（还原层）manifest 目录与偏离标记扫描根。
 
 **第四步 · 建设计真源（token 先行）**

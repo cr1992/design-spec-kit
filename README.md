@@ -73,10 +73,10 @@ design-spec-kit/
 1. 把整个 `design-spec-kit/` 目录复制进目标项目。
 2. 将 `CLAUDE.template.md` 复制到项目根目录并改名为 `CLAUDE.md`，替换占位内容。
 3. 将需要的 `docs/*.template.md` 复制到项目文档目录，去掉 `.template` 后缀。
-4. 保留 `tools/` 整目录，在 `tools/run-checks.js` 顶部配置 `INSTALLED_LAYERS`：
-   - `['base']`：默认底座。
-   - 加 `'i18n'`：启用国际化检查。
-   - 加 `'handoff'`：启用 manifest 与偏离台账检查。
+4. 保留 `tools/` 整目录，在项目的 `docs/design-spec/config.json` 里配置 `kit.layers`（模板见 `docs/config.template.json`；没有该文件时回退 `run-checks.js` 内默认 `['base']`，kit 源码无需改动）：
+   - `["base"]`：默认底座。
+   - 加 `"i18n"`：启用国际化检查。
+   - 加 `"handoff"`：启用 manifest 与偏离台账检查。
 5. 按项目实际目录修改各 guard 顶部的配置区。
 6. 跑 `node tools/kit-doctor.js`，确认入口、层配置和 guard 文件都对上。
 
@@ -106,7 +106,7 @@ node tools/run-checks.js
 node tools/build-bundle.js --check
 ```
 
-`run-checks.js` 会按 `INSTALLED_LAYERS` 跑已启用层的 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。
+`run-checks.js` 会按启用层（`docs/design-spec/config.json` 的 `kit.layers`，缺省 `['base']`）跑 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。
 
 ## CI 与 Commit Gate
 

@@ -10,7 +10,9 @@
  * 层感知（防「整目录拷入 → 可选 guard 被误跑」）：tools/ 可以整目录拷入，本文件只跑
  * INSTALLED_LAYERS 启用层的 guard；未启用层的 guard 文件留在目录里会被明确「跳过」，
  * 不在任何层清单里的 check-*.js 视为项目自定义 guard，默认照跑。
- * ★INSTALLED_LAYERS 是全 kit 的单一真源——kit-doctor 也从本文件读取它，别在别处另配。
+ * ★层开关单一真源 = 业务仓 docs/design-spec/config.json 的 kit.layers（本文件 / kit-doctor /
+ *   各 guard 同读）；没有该配置时才回退本文件的 DEFAULT_INSTALLED_LAYERS。
+ *   submodule 模式下 kit 源码保持只读——启用/关闭层一律改业务仓 config，别改这里。
  *
  * 怎么跑：
  *   node tools/run-checks.js              串跑启用层 guard
@@ -147,7 +149,7 @@ if (present.length === 0) {
   if (flags.list) {
     console.log(`启用层 [${INSTALLED_LAYERS.join(', ')}]${flags.all ? '（--all 无视层开关）' : ''} · 将跑 ${guards.length} 个 guard（目录：${SELF_DIR}）：`);
     for (const g of guards) console.log(`  - ${g}`);
-    for (const s of plan.skipped) console.log(`  · 跳过 ${s.file}（属未启用层 '${s.layer}'——启用改本文件顶部 INSTALLED_LAYERS）`);
+    for (const s of plan.skipped) console.log(`  · 跳过 ${s.file}（属未启用层 '${s.layer}'——启用在 docs/design-spec/config.json 配 kit.layers；无 config 的独立项目才改本文件 DEFAULT_INSTALLED_LAYERS）`);
     for (const m of plan.missing) console.log(`  ✗ 缺失 ${m}（启用层期望但文件不在——从 kit 拷入或关掉该层）`);
     console.log(plan.missing.length ? 'RESULT: FAIL' : 'RESULT: PASS');
     if (plan.missing.length) process.exitCode = 1;

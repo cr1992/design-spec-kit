@@ -1,0 +1,9 @@
+# design-spec-kit 内网主仓 CI —— 与 .github/workflows/ci.yml 等价，同跑聚合闸
+# （工具语法 / source doctor / bundle 漂移，见 tools/ci-check.js）
+kit:
+  image: node:20
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - node tools/ci-check.js
