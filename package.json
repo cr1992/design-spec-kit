@@ -1,0 +1,13 @@
+{
+  "name": "design-spec-kit",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "设计纪律 + 还原交接套件（与平台无关）。guard 双环境：node 直接跑，或整段粘进无 shell 的 AI 沙箱。",
+  "scripts": {
+    "check": "node tools/run-checks.js",
+    "doctor": "node tools/kit-doctor.js",
+    "bundle": "node tools/build-bundle.js",
+    "bundle:check": "node tools/build-bundle.js --check"
+  }
+}

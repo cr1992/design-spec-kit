@@ -1,0 +1,14 @@
+design-spec-kit 分发提示词
+═══════════════════════════════════════════════════════════
+用法：把 design-spec-kit.bundle.md 上传进新项目，连同下面这段提示词一起发给项目里的 Claude。
+
+──────────── 复制下面这段 ────────────
+
+我上传了 design-spec-kit.bundle.md。请把里面每个 ⟦FILE 路径⟧ … ⟦/FILE⟧ 块的内容【原样、逐字】写到对应路径(含子目录);其中 design-spec-kit/CLAUDE.template.md 写出后,复制到项目根目录改名 CLAUDE.md。tools/ 下的 .js 写成真实 .js 文件即可(现在不要执行)。全部落位后,读 design-spec-kit/AI-BOOTSTRAP.md,按它的首条指令继续。
+
+────────────────────────────────────
+
+说明:
+· bundle.md 由 tools/build-bundle.js 生成(勿手改),文件头自带版本号、文件清单与同样的拆包指令——即使忘了贴这段提示词,接手 AI 读到文件头也能照做。
+· tools/ 下全部 guard 脚本以纯文本随包走,落地后写成真实 .js;日后要跑:有 shell 用 node,无 shell 读全文粘进 run_script,看末行 RESULT: PASS / FAIL。
+· 落位后第一件事是按 AI-BOOTSTRAP 走完安装并跑 kit-doctor,别跳步直接画屏。
