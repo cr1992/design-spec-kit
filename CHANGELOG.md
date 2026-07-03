@@ -3,6 +3,11 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.0.2 — 2026-07-03
+
+- [文档] 新增 `docs/ADOPTION.md`，明确 kit 源、设计层、项目实现层的责任边界，并补充 CI / commit gate 接线示例。
+- [工程] 新增 GitHub Actions CI、`tools/ci-check.js` 和本仓 pre-commit hook 安装脚本，确保工具语法、source doctor、bundle 漂移检查在提交和 CI 中一致。
+
 ## v2.0.1 — 2026-07-03
 
 - [底座] 支持业务仓外部配置：`docs/design-spec/config.json` 可声明启用层、扫描根、baseline 路径、manifest/ledger 路径；submodule 接入时不再需要改 guard 源码。

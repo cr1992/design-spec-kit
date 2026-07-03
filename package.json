@@ -1,6 +1,6 @@
 {
   "name": "design-spec-kit",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "type": "module",
   "description": "设计纪律 + 还原交接套件（与平台无关）。guard 支持 node 直跑或无 shell 环境粘贴执行。",
@@ -8,6 +8,8 @@
     "check": "node tools/run-checks.js",
     "doctor": "node tools/kit-doctor.js",
     "bundle": "node tools/build-bundle.js",
-    "bundle:check": "node tools/build-bundle.js --check"
+    "bundle:check": "node tools/build-bundle.js --check",
+    "ci": "node tools/ci-check.js",
+    "hooks:install": "node tools/install-git-hooks.js"
   }
 }

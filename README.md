@@ -56,6 +56,16 @@ design-spec-kit/
    └─ build-bundle.js
 ```
 
+## 落地不是单目录复制
+
+这套方法需要设计层和项目层一起接：
+
+- **设计层**：维护 token、图标真源、DESIGN-REF、设计侧 CHANGELOG，先用 base guard 防新增漂移。
+- **项目层**：维护 `docs/design-spec/config.json`、baseline、IMPL-PROFILE、manifest、DEVIATION-LEDGER，并把 guard 接到 CI 或 commit gate。
+- **kit 源**：只维护通用模板和工具；业务项目通过 submodule/tag/bundle 消费，不直接改 kit 源码。
+
+完整落地顺序、CI 示例和 commit gate 示例见 [`docs/ADOPTION.md`](docs/ADOPTION.md)。
+
 ## 使用方式
 
 ### 方式一：从独立仓复制
@@ -97,6 +107,18 @@ node tools/build-bundle.js --check
 ```
 
 `run-checks.js` 会按 `INSTALLED_LAYERS` 跑已启用层的 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。
+
+## CI 与 Commit Gate
+
+本仓自带 GitHub Actions：`.github/workflows/ci.yml`，运行 `node tools/ci-check.js`，覆盖工具语法、source doctor、bundle 漂移检查。
+
+本仓也提供本地 pre-commit hook：
+
+```bash
+npm run hooks:install
+```
+
+使用方项目建议把 `node tools/design-spec-kit/tools/run-checks.js` 接到自己的 CI / commit gate，并按路径触发；不要在 handoff 资产未齐时全仓硬拦。
 
 ## Guard 清单
 

@@ -33,6 +33,7 @@ const ROOT_FILES = [
   'EXTENDING.md',
   'HANDOFF.md',
   'package.json',
+  '.githooks/pre-commit',
 ];
 
 // 目录扫描规则：进这些目录，按扩展名过滤，排除子路径含 _archive 的文件。
