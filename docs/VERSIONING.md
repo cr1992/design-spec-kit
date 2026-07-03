@@ -25,7 +25,7 @@
 ## bundle 是生成物
 - `design-spec-kit.bundle.md` 由 `tools/build-bundle.js` 从文件清单重生，**勿手改**。
 - 改任何 kit 文件后重生 bundle；`build-bundle.js --check` 校验 bundle 与源文件一致（漂移 = FAIL），挂 kit 仓 CI。
-- bundle 头部自带版本号与拆包指令；分发时连同 `分发提示词.txt` 一起给。
+- bundle 头部自带版本号与拆包指令；分发时连同 `distribution-prompt.txt` 一起给。
 
 ## 旧嵌入式实例的退役
 kit 从某项目目录里「独立出仓」时：原目录保留一个过渡窗口（建议两个迭代），期间只留 README 指针（「本目录已迁往 <kit 仓地址>，版本 pin 见 .design-spec-kit.version」），窗口结束删除目录。同步物（会被上游同步机制覆盖的树）里不要留 kit 源文件，避免双权威。

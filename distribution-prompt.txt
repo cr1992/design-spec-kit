@@ -1,0 +1,14 @@
+design-spec-kit distribution prompt
+═══════════════════════════════════════════════════════════
+用法：把 design-spec-kit.bundle.md 上传到目标项目，并把下面这段话一起发给负责落位的执行者。
+
+──────────── 复制下面这段 ────────────
+
+我上传了 design-spec-kit.bundle.md。请把里面每个 ⟦FILE 路径⟧ … ⟦/FILE⟧ 块的内容原样写到对应路径（含子目录）；其中 design-spec-kit/CLAUDE.template.md 写出后，复制到项目根目录并改名为 CLAUDE.md。tools/ 下的 .js 写成真实 .js 文件即可，现在不要执行。全部落位后，读取 design-spec-kit/AI-BOOTSTRAP.md，并按其中步骤继续。
+
+────────────────────────────────────
+
+说明：
+· bundle.md 由 tools/build-bundle.js 生成，勿手改；文件头自带版本号、文件清单和拆包指令。
+· tools/ 下全部 guard 脚本以纯文本随包走；落地后写成真实 .js。有 shell 时用 node 跑；无 shell 时读脚本全文粘贴执行，看末行 RESULT: PASS / FAIL。
+· 落位后先跑 kit-doctor，再进入具体页面或组件工作。

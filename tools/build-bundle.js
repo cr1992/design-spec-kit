@@ -2,7 +2,7 @@
 /**
  * build-bundle.js · bundle 生成器（design-spec-kit · 与平台无关）
  *
- * node-only；沙箱用户逐个跑 guard 即可（bundle 生成不是沙箱场景，接手 AI 是
+ * node-only；沙箱用户逐个跑 guard 即可（bundle 生成不是沙箱场景，落位执行者是
  * bundle 的*消费方*而非生产方）。
  *
  * 守什么：`design-spec-kit.bundle.md` 是「整个 kit 塞进一个文件」的分发形态
@@ -43,7 +43,7 @@ const DIR_RULES = [
 
 const EXCLUDE_BASENAMES = new Set([
   'design-spec-kit.bundle.md',   // bundle 自身
-  '分发提示词.txt',                // 分发提示词单独发，不进 bundle 正文
+  'distribution-prompt.txt',        // distribution prompt 单独发，不进 bundle 正文
   'CHANGELOG.md',                 // kit 自身日志不进实例包（VERSIONING.md 已声明）
 ]);
 const EXCLUDE_SUFFIXES = ['.baseline.json'];
@@ -109,7 +109,7 @@ function buildHeader(version, fileList) {
 #
 # 用途：当目标项目只能「一个个上传文件」、没有 git 时，只上传/粘贴本文件这一个即可。
 #
-# ★ 给接手项目的 AI（读到本文件请执行）：
+# ★ 给落位执行者（读到本文件请执行）：
 #   1. 下面用 ⟦FILE 路径⟧ … ⟦/FILE⟧ 包了 ${fileList.length + 1} 个文件（含版本 pin）。把每段内容【原样、逐字】写到它的「路径」（含子目录）。
 #   2. 其中 design-spec-kit/CLAUDE.template.md 写出后，复制到【项目根目录】改名 CLAUDE.md（这是会被自动加载的契约）。
 #   3. ${VERSION_PIN_FILENAME} 写到【项目根目录】（与 CLAUDE.md 同级，不进 design-spec-kit/ 子目录）——它是版本 pin，kit-doctor 靠它判断落后几个版本。
