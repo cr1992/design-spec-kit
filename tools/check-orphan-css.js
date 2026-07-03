@@ -32,20 +32,29 @@ if (typeof readFile !== 'function') {
 
 // ─── 配置（接手第一件事：按你的项目改这里）──────────────────────
 
+async function readDesignSpecConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json')); }
+  catch { return {}; }
+}
+const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
+const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-orphan-css'] || DESIGN_SPEC_CONFIG.guards?.['check-orphan-css.js'] || {};
+const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
+const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
+
 const args = [];   // 沙箱手改位。例：['--write-baseline'] 把当前全部孤儿固化为新 baseline
 const EFFECTIVE_ARGS = args.length ? args : (globalThis.__NODE__ ? process.argv.slice(2) : []);
 
 // ① CSS 定义面（递归）：class 定义在哪。不存在的目录自动跳过。
-const CSS_ROOTS  = ['styles', 'css', 'design-system'];
+const CSS_ROOTS  = cfgArray('cssRoots', ['styles', 'css', 'design-system']);
 // ② 使用面（递归）：class 被谁引用。'.' 兜底扫根目录散件；不存在的自动跳过。
-const USAGE_ROOTS = ['pages', 'src', 'components', '.'];
+const USAGE_ROOTS = cfgArray('usageRoots', ['pages', 'src', 'components', '.']);
 const USAGE_EXT  = /\.(html|js|jsx|ts|tsx|vue|svelte)$/i;
 const CSS_EXT    = /\.(css|scss|less)$/i;
 
 // 整目录级 skip（依赖 / 构建产物 / 归档 / 工具 / 草稿 / 版本库 —— 按你的项目增删）
-const SKIP_DIRS  = new Set(['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']);
+const SKIP_DIRS  = new Set(cfgArray('skipDirs', ['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']));
 
-const BASELINE_PATH = 'tools/check-orphan-css.baseline.json';
+const BASELINE_PATH = cfgValue('baselinePath', 'tools/check-orphan-css.baseline.json');
 
 // ─── 去注释（保留位置，方便行号反查）──────────────────────────
 const stripCss  = s => s.replace(/\/\*[\s\S]*?\*\//g, m => ' '.repeat(m.length));

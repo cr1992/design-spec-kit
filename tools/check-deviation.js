@@ -40,19 +40,28 @@ if (typeof readFile !== 'function') {
 
 // ─── 配置（接手第一件事：按你的项目改这里）──────────────────────
 
+async function readDesignSpecConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json')); }
+  catch { return {}; }
+}
+const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
+const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-deviation'] || DESIGN_SPEC_CONFIG.guards?.['check-deviation.js'] || {};
+const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
+const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
+
 const args = [];   // 沙箱手改位：本 guard 无 flag，留空即可
 
 // ★必改：实现代码扫描根（可跨目录）。空 = FAIL（防「没扫任何代码」的假 PASS）。
-const IMPL_ROOTS = [];
+const IMPL_ROOTS = cfgArray('implRoots', []);
 // 扫哪些扩展名（实现代码常见语言；按你的栈增删）
 const IMPL_EXT = /\.(js|jsx|ts|tsx|dart|kt|swift|vue|svelte|html|go|py|rs|java|mm|m)$/i;
 // 偏离台账路径（markdown，一行一条）
-const LEDGER_PATH = 'docs/DEVIATION-LEDGER.md';
+const LEDGER_PATH = cfgValue('ledgerPath', 'docs/DEVIATION-LEDGER.md');
 // manifest 生成物目录（存在才读；用于「待裁决队列」摘要）
-const MANIFEST_DIR = 'docs/manifests';
+const MANIFEST_DIR = cfgValue('manifestDir', 'docs/manifests');
 const MANIFEST_SUFFIX = '.manifest.generated.json';
 // 整目录级 skip
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.git', '_archive', 'uploads', 'vendor', 'drafts', 'export', 'coverage']);
+const SKIP_DIRS = new Set(cfgArray('skipDirs', ['node_modules', 'dist', 'build', '.git', '_archive', 'uploads', 'vendor', 'drafts', 'export', 'coverage']));
 
 // 偏离标记正则：匹配 @design-deviation( ... )，宽容解析 parens 内 key: value 对。
 // 捕获组 1 = 括号内原文（后续按 key 逐个抠 id/kind/basis，容忍顺序 / 空格 / 换行 / 引号）。

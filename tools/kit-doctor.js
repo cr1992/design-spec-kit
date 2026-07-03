@@ -89,7 +89,19 @@ const selfIsProjectTools = path.resolve(SELF_DIR) === path.resolve(PROJECT_ROOT,
 const IS_SOURCE = EFFECTIVE_ARGS.includes('--source') ||
   (selfIsProjectTools && (await readIfExists(path.join(SELF_DIR, '..', 'CLAUDE.template.md'))) !== null);
 
+const PROJECT_CONFIG_PATH = 'docs/design-spec/config.json';
+async function readProjectConfig() {
+  const src = await readIfExists(path.join(PROJECT_ROOT, PROJECT_CONFIG_PATH));
+  if (!src) return {};
+  try { return JSON.parse(src); }
+  catch { warn(`${PROJECT_CONFIG_PATH} 不是合法 JSON，忽略外部配置并回退源码默认值`); return {}; }
+}
+const PROJECT_CONFIG = IS_SOURCE ? {} : await readProjectConfig();
+
 async function readInstalledLayers() {
+  const configured = PROJECT_CONFIG.kit?.layers;
+  if (Array.isArray(configured) && configured.length > 0) return { layers: configured, from: PROJECT_CONFIG_PATH };
+
   const src = await readIfExists(path.join(SELF_DIR, 'run-checks.js'));
   if (src) {
     const items = extractArrayConst(src, 'INSTALLED_LAYERS');
@@ -128,13 +140,18 @@ async function checkGuardsPresent() {
 // 每条探针：guard 文件、要抽的常量名、判据类型（dir=目录存在且非空 / file=文件可读）。
 // optionalEmpty=true 表示空数组是合法关闭某个子维，而不是「装了没适配」。
 const PROBES = [
-  { guard: 'check-tokens.js',     const: 'SCAN_ROOTS', kind: 'dirlist' },
-  { guard: 'check-orphan-css.js', const: 'CSS_ROOTS',  kind: 'dirlist' },
-  { guard: 'check-i18n.js',       const: 'DICT_PATHS', kind: 'filelist' },
-  { guard: 'check-deviation.js',  const: 'IMPL_ROOTS', kind: 'dirlist' },
-  { guard: 'check-icons.js',      const: 'REGISTRY_SOURCES', kind: 'filelist', optionalEmpty: true,
+  { guard: 'check-tokens.js',     const: 'SCAN_ROOTS', key: 'scanRoots',       kind: 'dirlist' },
+  { guard: 'check-orphan-css.js', const: 'CSS_ROOTS',  key: 'cssRoots',        kind: 'dirlist' },
+  { guard: 'check-i18n.js',       const: 'DICT_PATHS', key: 'dictPaths',       kind: 'filelist' },
+  { guard: 'check-deviation.js',  const: 'IMPL_ROOTS', key: 'implRoots',       kind: 'dirlist' },
+  { guard: 'check-icons.js',      const: 'REGISTRY_SOURCES', key: 'registrySources', kind: 'filelist', optionalEmpty: true,
     note: '空数组 = 关闭同形重画维；check-icons 仍会跑同名异形扫描' },
 ];
+
+function guardConfig(guardFile) {
+  const name = guardFile.replace(/\.js$/, '');
+  return PROJECT_CONFIG.guards?.[name] || PROJECT_CONFIG.guards?.[guardFile] || {};
+}
 
 async function checkConfigProbes() {
   const report = [];
@@ -146,9 +163,12 @@ async function checkConfigProbes() {
       report.push(`  · ${probe.guard} 未启用（属层 ${layer}），跳过配置探针`);
       continue;
     }
-    const items = extractArrayConst(src, probe.const);
+    const sourceItems = extractArrayConst(src, probe.const);
+    const configuredItems = guardConfig(probe.guard)[probe.key];
+    const items = Array.isArray(configuredItems) ? configuredItems : sourceItems;
+    const itemSource = Array.isArray(configuredItems) ? PROJECT_CONFIG_PATH : 'guard 源码默认值';
     if (items == null) {
-      report.push(`  ? ${probe.guard} 的 ${probe.const} 未能从源码抽出（探针正则未命中，可能改了变量名——跳过）`);
+      report.push(`  ? ${probe.guard} 的 ${probe.const} 未能从源码抽出，也没有在 ${PROJECT_CONFIG_PATH} 配 ${probe.key}（跳过）`);
       continue;
     }
     if (items.length === 0) {
@@ -169,7 +189,7 @@ async function checkConfigProbes() {
       fail(`${probe.guard} 的 ${probe.const}=[${items.join(', ')}] 在当前项目全部零命中（目录不存在/为空或文件不可读）—— 配置命中探针失败，等于装了没适配`);
       report.push(`  ✗ ${probe.guard}  ${probe.const} 零命中：${items.join(', ')}`);
     } else {
-      report.push(`  ✓ ${probe.guard}  ${probe.const} 命中 ${hitCount}/${items.length}：${items.join(', ')}`);
+      report.push(`  ✓ ${probe.guard}  ${probe.const} 命中 ${hitCount}/${items.length}：${items.join(', ')}（${itemSource}）`);
     }
   }
   return report;

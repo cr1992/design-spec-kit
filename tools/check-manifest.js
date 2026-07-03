@@ -33,15 +33,24 @@ if (typeof readFile !== 'function') {
 
 // ─── 配置（接手第一件事：按你的项目改这里）──────────────────────
 
+async function readDesignSpecConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json')); }
+  catch { return {}; }
+}
+const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
+const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-manifest'] || DESIGN_SPEC_CONFIG.guards?.['check-manifest.js'] || {};
+const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
+const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
+
 const args = [];   // 沙箱手改位：本 guard 无 flag，留空即可
 
 // 生成物目录：guard 只认此目录下的 *.manifest.generated.json（HANDOFF §1.2「只认生成物」）
-const MANIFEST_DIR = 'docs/manifests';
+const MANIFEST_DIR = cfgValue('manifestDir', 'docs/manifests');
 // schema 真源：驱动内置迷你校验器，字段不硬编码（改 schema 无需改本文件）
-const SCHEMA_PATH = 'docs/screen-manifest.schema.json';
+const SCHEMA_PATH = cfgValue('schemaPath', 'docs/screen-manifest.schema.json');
 // ★可选：期望屏清单文件——配置了才做覆盖率对账；留空 '' = 关闭覆盖率检查。
 //   载体二选一：① 每行一个 screen-id 的纯文本；② 一个 JSON 数组 ["login","list",...]。
-const SCREENS_LIST_PATH = '';
+const SCREENS_LIST_PATH = cfgValue('screensListPath', '');
 
 // 生成物文件名约定（HANDOFF §1.2）
 const MANIFEST_SUFFIX = '.manifest.generated.json';

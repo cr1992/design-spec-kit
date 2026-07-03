@@ -47,25 +47,34 @@ if (typeof readFile !== 'function') {
 
 // ─── 配置（接手第一件事：按你的项目改这里）──────────────────────
 
+async function readDesignSpecConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json')); }
+  catch { return {}; }
+}
+const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
+const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-tokens'] || DESIGN_SPEC_CONFIG.guards?.['check-tokens.js'] || {};
+const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
+const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
+
 const args = [];   // 沙箱手改位。例：['--write-baseline'] 把当前扫描结果固化为新 baseline
 
 // ① 扫哪些目录（递归）。默认列了常见目录名，不存在的自动跳过——通常按你的项目补一两个即可。★按项目核对
-const SCAN_ROOTS = ['src', 'styles', 'css', 'components', 'pages', 'design-system'];
-const ROOT_FILES = [];                       // 需要额外扫的根散件（可留空）
+const SCAN_ROOTS = cfgArray('scanRoots', ['src', 'styles', 'css', 'components', 'pages', 'design-system']);
+const ROOT_FILES = cfgArray('rootFiles', []);                       // 需要额外扫的根散件（可留空）
 const CODE_EXT   = /\.(css|scss|less|js|jsx|ts|tsx|vue|svelte|html)$/i;
 
 // 整目录级 skip（依赖 / 构建产物 / 归档 / 工具 / 草稿 / 版本库 —— 按你的项目增删）
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']);
+const SKIP_DIRS = new Set(cfgArray('skipDirs', ['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']));
 // 整文件级 skip：token 唯一真源（hex/rgba 合法定义于此）
 const isSkipFile = p => /(^|\/)tokens\.css$/i.test(p);
 
-const BASELINE_PATH = 'tools/check-tokens.baseline.json';
+const BASELINE_PATH = cfgValue('baselinePath', 'tools/check-tokens.baseline.json');
 
 // ② 尺寸档集 = 你 tokens.css 的真实刻度（★必改）。下面是「4px 基准」示例，按你的项目替换。
 //    留空集 new Set() = 关闭对应子维（颜色维始终开）。
-const FS_OK     = new Set([12, 13, 14, 16, 18, 20, 24, 30, 36]);            // 字号档 --fs-*
-const SPACE_OK  = new Set([4, 8, 12, 16, 20, 24, 32, 40, 48, 64]);         // 间距档 --sp-*（4px 步进示例）
-const RADIUS_OK = new Set([4, 6, 8, 12, 16, 999]);                          // 圆角档 --r-*
+const FS_OK     = new Set(cfgArray('fontSizes', [12, 13, 14, 16, 18, 20, 24, 30, 36]));            // 字号档 --fs-*
+const SPACE_OK  = new Set(cfgArray('spacing', [4, 8, 12, 16, 20, 24, 32, 40, 48, 64]));         // 间距档 --sp-*（4px 步进示例）
+const RADIUS_OK = new Set(cfgArray('radii', [4, 6, 8, 12, 16, 999]));                          // 圆角档 --r-*
 // z-index：若你 tokens.css 定了 --z-* 刻度，可仿照加 Z_OK + 'z-index' 分支；默认不查。
 
 // 属性 → 档集映射。只查这几族；width/height/top/left/inset 等是任意尺寸，不纳入。

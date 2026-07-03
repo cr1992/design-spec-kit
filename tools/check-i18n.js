@@ -31,33 +31,42 @@ if (typeof readFile !== 'function') {
 
 // ─── 配置（接手第一件事：按你的项目改这里）──────────────────────
 
+async function readDesignSpecConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json')); }
+  catch { return {}; }
+}
+const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
+const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-i18n'] || DESIGN_SPEC_CONFIG.guards?.['check-i18n.js'] || {};
+const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
+const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
+
 const args = [];   // 沙箱手改位。例：['--write-baseline'] 把当前三维违规固化为新 baseline
 const EFFECTIVE_ARGS = args.length ? args : (globalThis.__NODE__ ? process.argv.slice(2) : []);
 
 // ── 维① 页面完整性 ──
 // 每个页面文件必须引用下列子串之一（引到 i18n 运行时才算挂上）。★必改：换成你项目的运行时文件名 / 模块名。
-const PAGE_ROOTS = ['pages', 'src'];
+const PAGE_ROOTS = cfgArray('pageRoots', ['pages', 'src']);
 const PAGE_EXT   = /\.(html|js|jsx|ts|tsx|vue|svelte)$/i;
-const I18N_RUNTIME_HINTS = ['i18n.js', 'i18n-dict'];   // ★必改
+const I18N_RUNTIME_HINTS = cfgArray('runtimeHints', ['i18n.js', 'i18n-dict']);   // ★必改
 // 豁免页面（如纯静态 login 无文案）：白名单命中即跳过。豁免须在 CHANGELOG 记档（输出会提醒）。
-const EXEMPT_PAGES = new Set([]);   // 例：'pages/login.html'
+const EXEMPT_PAGES = new Set(cfgArray('exemptPages', []));   // 例：'pages/login.html'
 
 // ── 维② 硬编码文案 ──
 // CODE_ROOTS 的 js/ts 文件去注释后，含 CJK 的字符串字面量、且该行不含任何包裹器名 → 违规。
-const CODE_ROOTS   = ['src', 'pages'];
+const CODE_ROOTS   = cfgArray('codeRoots', ['src', 'pages']);
 const CODE_EXT     = /\.(js|jsx|ts|tsx|mjs|cjs)$/i;
-const WRAPPER_NAMES = ['t(', 'I18N.t', 'tr('];   // ★可改：你项目的翻译调用形态
+const WRAPPER_NAMES = cfgArray('wrapperNames', ['t(', 'I18N.t', 'tr(']);   // ★可改：你项目的翻译调用形态
 
 // ── 维③ 死键 ──
 // 词典文件里按 KEY_RE 抽键；键名在全部使用面（PAGE_ROOTS + CODE_ROOTS）零出现 → 死键。
 // DICT_PATHS 配了但读不到 → FAIL（防呆：别把词典路径写错还静默 PASS）。
-const DICT_PATHS = [];   // ★必改：例 ['src/i18n-dict.js']。留空 = 不查维③。
+const DICT_PATHS = cfgArray('dictPaths', []);   // ★必改：例 ['src/i18n-dict.js']。留空 = 不查维③。
 const KEY_RE     = /["']([\w.]+(?:\.[\w.]+)+)["']\s*:/g;   // ★按项目改：默认匹配 "a.b.c": 形态（含点的键路径）
 
 // 整目录级 skip（依赖 / 构建产物 / 归档 / 工具 / 草稿 / 版本库）
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']);
+const SKIP_DIRS = new Set(cfgArray('skipDirs', ['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']));
 
-const BASELINE_PATH = 'tools/check-i18n.baseline.json';
+const BASELINE_PATH = cfgValue('baselinePath', 'tools/check-i18n.baseline.json');
 
 // ─── 去注释（保留位置，方便行号反查）──────────────────────────
 const stripHtml = s => s.replace(/<!--[\s\S]*?-->/g, m => ' '.repeat(m.length));

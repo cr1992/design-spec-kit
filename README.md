@@ -74,6 +74,20 @@ design-spec-kit/
 
 发送 `design-spec-kit.bundle.md` 和 `distribution-prompt.txt`。bundle 由 `node tools/build-bundle.js` 生成，源文件更新后必须重新生成。
 
+## 业务仓配置
+
+作为 submodule 接入时，不要修改 `tools/design-spec-kit/` 里的源码。业务仓在自己的根目录维护：
+
+```text
+docs/design-spec/config.json
+docs/design-spec/baselines/
+docs/design-spec/manifests/
+docs/design-spec/DEVIATION-LEDGER.md
+.design-spec-kit.version
+```
+
+`docs/config.template.json` 是配置模板。`run-checks.js`、`kit-doctor.js` 和各 guard 会优先读取业务仓的 `docs/design-spec/config.json`；没有配置时才回退 kit 源码默认值。
+
 ## 检查命令
 
 ```bash

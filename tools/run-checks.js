@@ -19,7 +19,7 @@
  *   node tools/run-checks.js --all        无视层开关跑全部存在的 guard
  * ═════════════════════════════════════════════════════════════*/
 
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -27,9 +27,17 @@ import { spawn } from 'node:child_process';
 // ─── 配置 ──────────────────────────────────────────────────────
 const args = [];   // 沙箱手改位（本文件 node-only，一般留空，走 process.argv）
 
-// ★必改：本实例启用的层（全 kit 单一真源，kit-doctor 从这里读）。
-// 'base' 恒装；项目有 i18n 机制加 'i18n'；装了还原交接层（HANDOFF）加 'handoff'。
-const INSTALLED_LAYERS = ['base'];
+async function readProjectConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json', 'utf8')); }
+  catch { return {}; }
+}
+const PROJECT_CONFIG = await readProjectConfig();
+
+// 本实例启用的层。优先读业务仓 docs/design-spec/config.json 的 kit.layers；
+// 没有配置时回退 base。这样 submodule 不需要改源码。
+const DEFAULT_INSTALLED_LAYERS = ['base'];
+const configuredLayers = PROJECT_CONFIG.kit?.layers;
+const INSTALLED_LAYERS = Array.isArray(configuredLayers) && configuredLayers.length > 0 ? configuredLayers : DEFAULT_INSTALLED_LAYERS;
 
 // 各层的 guard 清单（新增层在这里补一行；不在任何层里的 check-*.js = 自定义 guard，默认照跑）
 const LAYER_GUARDS = {

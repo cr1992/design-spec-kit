@@ -29,11 +29,20 @@ if (typeof readFile !== 'function') {
 
 // ─── 配置（接手第一件事：按你的项目改这里）──────────────────────
 
+async function readDesignSpecConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json')); }
+  catch { return {}; }
+}
+const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
+const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-changelog'] || DESIGN_SPEC_CONFIG.guards?.['check-changelog.js'] || {};
+const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
+const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
+
 const args = [];   // 沙箱手改位（本 guard 目前不消费 flag，保留占位以对齐标准约定）
 
-const CHANGELOG_PATH = 'docs/CHANGELOG.md';   // ★ 你的 CHANGELOG 路径
-const WARN_LINES = 200;   // 超过此行数 → 提示归档（留最近 ~2 会话日 / 超 ~200 行归档）
-const MAX_SUB    = 3;     // 单条目允许的子 bullet 上限（1 行标题 + 最多 3 子 bullet）
+const CHANGELOG_PATH = cfgValue('changelogPath', 'docs/CHANGELOG.md');   // ★ 你的 CHANGELOG 路径
+const WARN_LINES = Number(cfgValue('warnLines', 200));   // 超过此行数 → 提示归档（留最近 ~2 会话日 / 超 ~200 行归档）
+const MAX_SUB    = Number(cfgValue('maxSubItems', 3));     // 单条目允许的子 bullet 上限（1 行标题 + 最多 3 子 bullet）
 
 // 模块索引：位于 `## 模块索引` 段内的清单行，形如 `- **标签** — 说明`；条目使用形如 `- [标签] 描述`。
 // 索引项抽取正则：捕获组 1 = 标签名。★若你的索引写法不同（如无加粗），改这里。

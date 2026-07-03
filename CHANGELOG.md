@@ -3,6 +3,11 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.0.1 — 2026-07-03
+
+- [底座] 支持业务仓外部配置：`docs/design-spec/config.json` 可声明启用层、扫描根、baseline 路径、manifest/ledger 路径；submodule 接入时不再需要改 guard 源码。
+- [工具] `run-checks.js` / `kit-doctor.js` 优先读取外部配置；新增 `docs/config.template.json`。
+
 ## v2.0.0 — 2026-07-03
 
 - [还原层] 新增设计→实现交接契约：`HANDOFF.md` + `docs/SCREEN-MANIFEST.template.md` + `docs/screen-manifest.schema.json` + `docs/IMPL-PROFILE.template.md` + `docs/DEVIATION-LEDGER.template.md`；新 guard⑥ `check-manifest.js`、guard⑦ `check-deviation.js`。

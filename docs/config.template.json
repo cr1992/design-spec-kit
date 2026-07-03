@@ -1,0 +1,127 @@
+{
+  "kit": {
+    "layers": [
+      "base"
+    ],
+    "notes": "业务仓在这里配置已启用层；submodule 内源码保持只读。可选层：i18n、handoff。"
+  },
+  "guards": {
+    "check-tokens": {
+      "scanRoots": [
+        "src",
+        "styles",
+        "css",
+        "components",
+        "pages",
+        "design-system"
+      ],
+      "rootFiles": [],
+      "skipDirs": [
+        "node_modules",
+        "dist",
+        "build",
+        ".git",
+        "_archive",
+        "tools",
+        "uploads",
+        "vendor",
+        "drafts",
+        "export"
+      ],
+      "baselinePath": "docs/design-spec/baselines/check-tokens.baseline.json",
+      "fontSizes": [
+        12,
+        13,
+        14,
+        16,
+        18,
+        20,
+        24,
+        30,
+        36
+      ],
+      "spacing": [
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        32,
+        40,
+        48,
+        64
+      ],
+      "radii": [
+        4,
+        6,
+        8,
+        12,
+        16,
+        999
+      ]
+    },
+    "check-icons": {
+      "scanRoots": [
+        "src",
+        "components",
+        "pages",
+        "assets",
+        "design-system"
+      ],
+      "registrySources": [],
+      "ignore": [],
+      "baselinePath": "docs/design-spec/baselines/check-icons.baseline.json"
+    },
+    "check-changelog": {
+      "changelogPath": "docs/design-spec/CHANGELOG.md",
+      "warnLines": 200,
+      "maxSubItems": 3
+    },
+    "check-orphan-css": {
+      "cssRoots": [
+        "styles",
+        "css",
+        "design-system"
+      ],
+      "usageRoots": [
+        "pages",
+        "src",
+        "components",
+        "."
+      ],
+      "baselinePath": "docs/design-spec/baselines/check-orphan-css.baseline.json"
+    },
+    "check-i18n": {
+      "pageRoots": [
+        "pages",
+        "src"
+      ],
+      "codeRoots": [
+        "src",
+        "pages"
+      ],
+      "runtimeHints": [
+        "i18n.js",
+        "i18n-dict"
+      ],
+      "wrapperNames": [
+        "t(",
+        "I18N.t",
+        "tr("
+      ],
+      "dictPaths": [],
+      "baselinePath": "docs/design-spec/baselines/check-i18n.baseline.json"
+    },
+    "check-manifest": {
+      "manifestDir": "docs/design-spec/manifests",
+      "schemaPath": "docs/design-spec/screen-manifest.schema.json",
+      "screensListPath": "docs/design-spec/screens.txt"
+    },
+    "check-deviation": {
+      "implRoots": [],
+      "ledgerPath": "docs/design-spec/DEVIATION-LEDGER.md",
+      "manifestDir": "docs/design-spec/manifests"
+    }
+  }
+}

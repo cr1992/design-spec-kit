@@ -29,3 +29,9 @@
 
 ## 旧嵌入式实例的退役
 kit 从某项目目录里「独立出仓」时：原目录保留一个过渡窗口（建议两个迭代），期间只留 README 指针（「本目录已迁往 <kit 仓地址>，版本 pin 见 .design-spec-kit.version」），窗口结束删除目录。同步物（会被上游同步机制覆盖的树）里不要留 kit 源文件，避免双权威。
+
+
+## submodule 接入
+- 业务仓可把 kit 作为 submodule 放在 `tools/design-spec-kit/`，版本由 submodule commit + `.design-spec-kit.version` 双重记录。
+- 业务仓配置放在 `docs/design-spec/config.json`，不要改 submodule 内 guard 源码；否则升级会产生 dirty submodule。
+- 升级流程：更新 submodule 到目标 tag → 更新 `.design-spec-kit.version` 第一行为 `package.json` 的 version → 跑 `node tools/design-spec-kit/tools/kit-doctor.js`。

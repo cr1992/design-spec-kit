@@ -34,18 +34,27 @@ if (typeof readFile !== 'function') {
 
 // ─── 配置（接手第一件事：按你的项目改这里）──────────────────────
 
+async function readDesignSpecConfig() {
+  try { return JSON.parse(await readFile('docs/design-spec/config.json')); }
+  catch { return {}; }
+}
+const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
+const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-icons'] || DESIGN_SPEC_CONFIG.guards?.['check-icons.js'] || {};
+const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
+const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
+
 const args = [];   // 沙箱手改位。例：['--write-baseline'] 把当前 duplicate 固化为新 baseline
 
-const SCAN_ROOTS = ['src', 'components', 'pages', 'assets', 'design-system'];
-const SKIP_DIRS  = new Set(['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']);
+const SCAN_ROOTS = cfgArray('scanRoots', ['src', 'components', 'pages', 'assets', 'design-system']);
+const SKIP_DIRS  = new Set(cfgArray('skipDirs', ['node_modules', 'dist', 'build', '.git', '_archive', 'tools', 'uploads', 'vendor', 'drafts', 'export']));
 const CODE_EXT   = /\.(js|jsx|ts|tsx|vue|svelte|html)$/i;
 
 // ① registry 源文件 = 项目「单一图标库」的真源文件（★按项目填）。用于同形重画维：
 //    这些文件里的字形被别处 inline 复制 = duplicate。留空数组 = 关闭同形重画维（只跑同名异形）。
-const REGISTRY_SOURCES = [];   // 例：['src/icons/registry.js']
+const REGISTRY_SOURCES = cfgArray('registrySources', []);   // 例：['src/icons/registry.js']
 
 // 故意保留的同名异形例外（如特色 / 动画版与标准版并存）：填 'name' 跳过。
-const IGNORE = new Set([]);
+const IGNORE = new Set(cfgArray('ignore', []));
 
 // ② 图标定义抽取（线性正则，避免回溯）：捕获组 1 = 名，组 2 = 字形。★按项目图标写法启用需要的行。
 const DEF_PATTERNS = [
@@ -54,7 +63,7 @@ const DEF_PATTERNS = [
   /([a-zA-Z][\w-]*)\s*:\s*\{\s*s\s*:\s*[\d.]+\s*,\s*p\s*:\s*'([^']*)'\s*\}/g, // name: { s: <n>, p: '<path .../>' }  对象式（按项目启用）
 ];
 
-const BASELINE_PATH = 'tools/check-icons.baseline.json';
+const BASELINE_PATH = cfgValue('baselinePath', 'tools/check-icons.baseline.json');
 
 const EFFECTIVE_ARGS = args.length ? args : (globalThis.__NODE__ ? process.argv.slice(2) : []);
 
