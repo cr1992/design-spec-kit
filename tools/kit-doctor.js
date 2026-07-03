@@ -13,7 +13,7 @@
  *   ② 配置命中探针 —— 仅对启用层 guard 生效；从源码抽取关键配置常量，对 cwd 验证
  *                      「目录存在且非空 / 文件可读 / 必填数组非空」，不满足视为漏配
  *   ③ 入口接线 —— cwd 的 package.json scripts.check 是否指向 run-checks（或等价）
- *   ④ 版本 pin —— cwd 下 .design-spec-kit.version 与 kit package.json version 比对
+ *   ④ 版本 pin —— submodule 接入看 gitlink（不需 version 文件）；复制式接入才对比 .design-spec-kit.version
  *   ⑤ DoD 对账 —— cwd 的 CLAUDE.md 是否提到每个已装 guard 文件名
  *
  * FAIL 仅由 ①② 触发（guard 缺失 / 配置零命中 = 装了跟没装一样）；③④⑤ 只报 WARN。
@@ -222,17 +222,28 @@ async function checkVersionPin() {
   let kitVersion = null;
   try { kitVersion = kitPkgSrc ? JSON.parse(kitPkgSrc).version : null; } catch { /* ignore */ }
 
+  // submodule / 独立 clone 接入：kit 目录本身受 git 管（.git 文件或目录存在），
+  // 版本 pin 的真源 = gitlink（git submodule status），比手写 version 文件更精确且不会漂。
+  // 这种接入不要求 .design-spec-kit.version——那是给「复制式接入」（纯拷文件、无 gitlink）用的。
+  const kitDirIsGitManaged = await fileReadable(path.join(SELF_DIR, '..', '.git'));
+
   const pinSrc = await readIfExists(path.join(PROJECT_ROOT, '.design-spec-kit.version'));
   if (pinSrc == null) {
-    const isKitRepoItself = await fileReadable(path.join(PROJECT_ROOT, 'tools', 'build-bundle.js')) ||
-                             await fileReadable('build-bundle.js');
     // 更可靠的判据：cwd 自身是否就是 kit 仓（自身目录下能找到 build-bundle.js 且路径一致）
     const selfIsProjectTools = path.resolve(SELF_DIR) === path.resolve(PROJECT_ROOT, 'tools');
     if (selfIsProjectTools && await fileReadable(path.join(SELF_DIR, 'build-bundle.js'))) {
       return '  · kit 仓模式（自身即 kit 源仓，无需版本 pin），跳过';
     }
-    warn(`cwd 下没有 .design-spec-kit.version —— 实例应在拷入时写一个版本 pin 文件（内容一行 = 拷入时的 kit 版本号），否则升级时无法判断落后几个版本`);
-    return isKitRepoItself ? '  · 疑似 kit 仓模式，跳过' : '  ⚠ 缺 .design-spec-kit.version';
+    if (kitDirIsGitManaged) {
+      return `  · submodule 接入：版本 pin 由 gitlink 维护（当前 kit=${kitVersion ?? '未知'}），查看用 \`git submodule status\`——不需要 .design-spec-kit.version`;
+    }
+    warn(`复制式接入缺 .design-spec-kit.version —— 纯拷文件（无 submodule gitlink）时应写一个版本 pin 文件（一行 = 拷入的 kit 版本），否则升级时无法判断落后几版。submodule 接入忽略本条。`);
+    return '  ⚠ 缺 .design-spec-kit.version（仅复制式接入需要；submodule 接入应删掉它，改看 gitlink）';
+  }
+  // 有 version 文件但同时是 submodule 接入 = 第二真源，必漂，提示删除
+  if (kitDirIsGitManaged) {
+    warn(`submodule 接入却存在 .design-spec-kit.version —— gitlink 已是版本真源，该文件是会漂的第二真源，建议删除，版本改看 \`git submodule status\``);
+    return `  ⚠ submodule 接入应删掉 .design-spec-kit.version（gitlink 已 pin，当前 kit=${kitVersion ?? '未知'}）`;
   }
   const pinned = pinSrc.trim().split('\n')[0].trim();
   if (kitVersion && pinned !== kitVersion) {

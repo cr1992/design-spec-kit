@@ -93,8 +93,9 @@ docs/design-spec/config.json
 docs/design-spec/baselines/
 docs/design-spec/manifests/
 docs/design-spec/DEVIATION-LEDGER.md
-.design-spec-kit.version
 ```
+
+submodule 接入**不建** `.design-spec-kit.version`——版本 pin 就是 submodule 的 gitlink（`git submodule status`），手写文件是会漂的第二真源。`.design-spec-kit.version` 只在复制式接入（纯拷文件、无 gitlink）时才需要。详见 `docs/VERSIONING.md`。
 
 `docs/config.template.json` 是配置模板。`run-checks.js`、`kit-doctor.js` 和各 guard 会优先读取业务仓的 `docs/design-spec/config.json`；没有配置时才回退 kit 源码默认值。
 

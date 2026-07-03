@@ -4,13 +4,14 @@
 
 ## 角色
 - **kit 仓（权威源）**：本套件的 git 仓库，语义化版本 tag（`v2.0.0` 起）。`package.json` 的 `version` 字段 = 当前版本唯一真源。
-- **实例**：使用方项目里拷入的那份 kit 文件（契约 + docs + tools）。实例根目录放一个 **`.design-spec-kit.version`** 文件，内容一行 = 拷入时的 kit 版本号。`kit-doctor` 读它对比 kit 版本，报「落后 N 个版本」。
-- **无 git 环境的设计项目**：持有 bundle 拆包出的实例，同样写版本 pin 文件（bundle 里自带）。
+- **实例**：使用方项目里那份 kit（契约 + docs + tools）。版本 pin 有两种，**按接入方式二选一，不要并存**：
+  - **submodule 接入**（推荐）：版本 pin 就是 submodule 的 gitlink（精确到 commit）。`git submodule status` 即给版本，**不要**再建 `.design-spec-kit.version`——那会是会漂的第二真源。`kit-doctor` 检测到 kit 目录受 git 管即走此路。
+  - **复制式接入 / 无 git 环境**：纯拷文件或 bundle 拆包，没有 gitlink，才在实例根写一个 **`.design-spec-kit.version`** 文件（一行 = 拷入的 kit 版本号）；`kit-doctor` 读它对比 kit 版本报「落后 N 版」。
 
 ## 升级 SOP（实例侧）
 1. 读 kit 仓两个版本间的 CHANGELOG，确认破坏性变更（guard 配置区字段变化 / schema 变化 / DoD 行变化）。
 2. 覆盖拷入新版文件；**guard 配置区是实例资产**——按 diff 把本地配置（扫描目录 / 档集 / 正则）搬进新版配置区，不要整文件回退。
-3. 更新 `.design-spec-kit.version`。
+3. 更新版本 pin：submodule 接入 = bump submodule 到目标 tag（gitlink 自动记录，无文件要改）；复制式 = 改 `.design-spec-kit.version`。
 4. 跑 `kit-doctor`（配置命中数 / 入口接线 / DoD 对账）+ `run-checks`（baseline 兼容性——schema 变更可能需要按 guard 提示重写 baseline）。
 5. 两者绿才算升级完成；CHANGELOG 记一行。
 
@@ -31,7 +32,7 @@
 kit 从某项目目录里「独立出仓」时：原目录保留一个过渡窗口（建议两个迭代），期间只留 README 指针（「本目录已迁往 <kit 仓地址>，版本 pin 见 .design-spec-kit.version」），窗口结束删除目录。同步物（会被上游同步机制覆盖的树）里不要留 kit 源文件，避免双权威。
 
 
-## submodule 接入
-- 业务仓可把 kit 作为 submodule 放在 `tools/design-spec-kit/`，版本由 submodule commit + `.design-spec-kit.version` 双重记录。
+## submodule 接入（推荐）
+- 业务仓把 kit 作为 submodule 放在 `tools/design-spec-kit/`。**版本由 submodule 的 gitlink 单一记录**（精确到 commit，git 强制维护）——不要再建 `.design-spec-kit.version`，两个真源必漂。查看版本：`git submodule status`。
 - 业务仓配置放在 `docs/design-spec/config.json`，不要改 submodule 内 guard 源码；否则升级会产生 dirty submodule。
-- 升级流程：更新 submodule 到目标 tag → 更新 `.design-spec-kit.version` 第一行为 `package.json` 的 version → 跑 `node tools/design-spec-kit/tools/kit-doctor.js`。
+- 升级流程：`git -C tools/design-spec-kit fetch && git -C tools/design-spec-kit checkout <目标 tag>` → 在业务仓 `git add tools/design-spec-kit` 提交新 gitlink → 跑 `node tools/design-spec-kit/tools/kit-doctor.js`。无 version 文件要改。

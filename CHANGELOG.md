@@ -8,6 +8,11 @@
 - [壳] kit 随包 ship canonical 壳骨架 `shells/mobile-shell/`(business-free 移动端,从 hirobot 原型 promote):通用运行时 + 中性 demo 屏 + 占位视觉 + 纯度 / 同源 guard。新增 `docs/SHELL-KIT.md` 划清 kit 层(通用运行时)vs 项目层(纯度 config 各自填)、两种接入方式、canonical / 拷贝收敛。`check-shell-purity.js` 三 knob(`MODULE_PREFIX_RE`/`FORBID_WORDS`/`MODULES_DIR`)中性化,hirobot 值转注释示例;纯度 + kit-drift guard 均 PASS。桌面等壳后续 `shells/<name>/` 平级加。
 - [文档] `EXTENDING.md` 补壳纯度维:「造新壳最小清单」加 business-free 纯度 guard(`check-shell-purity.js`)+ ALLOW 白名单要求;挂钩②的 DoD guard 表加可选 `check-shell-purity.js` 行,指向 `mobile-shell` 参考实现。明确它与 `check-kit-drift.js` 正交——纯度守「壳永不指名业务」(引用 / 复制式都要)、同源守「复制副本没被就地改」(仅复制式)。
 
+## v2.0.4 — 2026-07-03
+
+- [工程] `kit-doctor` 版本检查改为 submodule-aware：kit 目录受 git 管（submodule / 独立 clone）时以 gitlink 为版本真源、不再要求 `.design-spec-kit.version`；同时存在该文件会 WARN「第二真源，建议删」。`.design-spec-kit.version` 明确降级为仅复制式接入（无 gitlink）需要。
+- [文档] README / VERSIONING 区分两种接入的版本 pin 方式（submodule=gitlink 单源、复制式=version 文件），修正原「submodule commit + version 文件双重记录」的双真源表述。
+
 ## v2.0.3 — 2026-07-03
 
 - [文档] 修正三处随 v2.0.1 外部配置遗留的旧指引（run-checks 头注释与跳过提示、README 安装步骤 4 与检查命令说明、AI-BOOTSTRAP 第三步）：层开关统一指向业务仓 `docs/design-spec/config.json` 的 `kit.layers`，不再引导修改 kit 源码内 `INSTALLED_LAYERS`。
