@@ -3,6 +3,10 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## Unreleased
+
+- [文档] `EXTENDING.md` 补壳纯度维:「造新壳最小清单」加 business-free 纯度 guard(`check-shell-purity.js`)+ ALLOW 白名单要求;挂钩②的 DoD guard 表加可选 `check-shell-purity.js` 行,指向 `mobile-shell` 参考实现。明确它与 `check-kit-drift.js` 正交——纯度守「壳永不指名业务」(引用 / 复制式都要)、同源守「复制副本没被就地改」(仅复制式)。
+
 ## v2.0.3 — 2026-07-03
 
 - [文档] 修正三处随 v2.0.1 外部配置遗留的旧指引（run-checks 头注释与跳过提示、README 安装步骤 4 与检查命令说明、AI-BOOTSTRAP 第三步）：层开关统一指向业务仓 `docs/design-spec/config.json` 的 `kit.layers`，不再引导修改 kit 源码内 `INSTALLED_LAYERS`。

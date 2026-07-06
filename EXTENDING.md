@@ -29,10 +29,12 @@
 | 改了 | 必做 | 谁来守 |
 |---|---|---|
 | 加 / 删 / 改屏 | 同步壳的屏清单(如 `PROTO_CONFIG.screens`);必要时更新架构 doc | 人 |
+| 改了壳资产(壳 CSS / JS 本身) | 跑壳自带的 `check-shell-purity.js` 守「壳永不指名业务」 | 🤖 |
 | 改了外壳机制(路由 / 转场 / 画布) | 跑壳自带的 `check-kit-drift.js` 守外壳同源 | 🤖 |
 
-> `check-kit-drift.js` 是**壳专属的第三个 guard**,只在「复制式复用了壳」的项目里需要。
-> ⚠ 若项目是**引用**壳(屏直接 `link ../<壳>/assets/*`、不复制),就**没有副本→没有副本漂移**,这个 guard 自动退役——底座的两个 guard 仍照常守。
+> `check-shell-purity.js` 是**壳纯度 guard**:壳里出现任何业务名字(模块前缀类 / 业务全局 / 业务词,含注释)即 FAIL,守「壳单向依赖底座、永不反向依赖业务」。模块类名从项目 `design-system/modules/*.css` 自动派生 + 业务词名单机检;ALLOW 白名单(壳唯一可指名的基础层 / 壳层类名)在壳 README 声明。只在**要保持壳 business-free** 时需要。参考实现见 `mobile-shell`。
+> `check-kit-drift.js` 是**壳同源 guard**,只在「复制式复用了壳」的项目里需要。
+> ⚠ 两者正交:纯度守「壳不指名业务」(引用式 / 复制式都要)、同源守「复制的壳副本没被就地改」(仅复制式)。若项目是**引用**壳(屏直接 `link ../<壳>/assets/*`、不复制),就**没有副本→没有副本漂移**,`check-kit-drift.js` 自动退役——纯度 guard 与底座的两个 guard 仍照常守。
 
 ### ③ 往 CLAUDE.md 补一节平台纪律 + 一份架构 doc
 壳把自己的「别自造清单」(如 iOS chrome / `data-nav` / 底部弹层 / 画布外壳都现成)补进 CLAUDE.md 的工作纪律,并把它的架构说明(如 `PROTOTYPE-ARCH.md`)放进 `docs/`。
@@ -45,9 +47,10 @@
 
 ## 造一个新壳的最小清单
 1. 壳目录里所有 CSS/组件**只用 `var(--*)`**,自带一份占位 `tokens.css` 仅供独立 demo。
-2. 写一份壳 README:它解决什么平台、屏怎么登记、有哪些现成能力(别让人重画)。
-3. 若是复制式复用,带一个 `check-kit-drift.js`;若是引用式,不需要。
-4. 给出要追加到底座的:DoD 平台行 + CLAUDE.md 平台小节 + 架构 doc。
-5. 确认壳目录已进 `check-tokens.js` 的 `SCAN_ROOTS`——纳入漂移防线。
+2. 写一份壳 README:它解决什么平台、屏怎么登记、有哪些现成能力(别让人重画),并声明 **ALLOW 白名单**——壳唯一可指名的基础层 / 壳层类名。
+3. 若壳要 **business-free**(单向依赖底座、永不指名业务),带一个 `check-shell-purity.js`:模块类名从项目 `design-system/modules/*.css` 自动派生 + 业务词名单机检,壳内冒出任何业务名字即 FAIL;ALLOW 白名单与壳 README 同一份。加新挂钩须同步 ALLOW + README 契约段。参考实现见 `mobile-shell`。
+4. 若是复制式复用,再带一个 `check-kit-drift.js`;引用式不需要。
+5. 给出要追加到底座的:DoD 平台行 + CLAUDE.md 平台小节 + 架构 doc。
+6. 确认壳目录已进 `check-tokens.js` 的 `SCAN_ROOTS`——纳入漂移防线。
 
 > 核心:壳负责「怎么呈现」,底座负责「不腐化」。两者通过 token 真源 + DoD 表 + CLAUDE 小节这三个挂钩点对接,各自可独立替换。
