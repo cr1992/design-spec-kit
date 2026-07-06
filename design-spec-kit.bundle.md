@@ -1035,7 +1035,7 @@ guard 盲区 59%（死 CSS + i18n 覆盖——v1 三个 guard 全是「新增侧
 - **kit `shells/mobile-shell/` = 唯一真源**(随 kit 版本走)。
 - 设计侧原型 / 复制式项目持**下游拷贝**,`check-kit-drift` 守同源。
 - **改壳只在 kit 改** → 重生 `kit-drift.baseline.json` → 再同步下发到各拷贝。**绝不就地补丁拷贝**(drift guard 会报红)。
-- 业务名单是项目层:各拷贝的 `check-shell-purity` 三 knob 可以各自项目化,**不算 drift**(drift 只守运行时 + demo 屏的字节同源;guard config 属项目层,不进 kit-drift baseline 的比对口径)。
+- 业务名单是项目层:各拷贝的 `check-shell-purity` 三 knob 可以各自项目化,**不算 drift**。落地机制:`check-kit-drift` 的 `SKIP` 把整个 `tools/check-shell-purity.js` 排除出 baseline——它是项目可配置工具,各拷贝改自己的 knob **不会触发 drift FAIL**。drift 守的是**壳运行时**(`assets/` + `screens/` + `index.html` + 占位视觉)与 `check-kit-drift.js` 自身的字节同源。
 
 ---
 

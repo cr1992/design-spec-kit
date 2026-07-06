@@ -60,11 +60,7 @@
     "len": 5768
   },
   "tools/check-kit-drift.js": {
-    "hash": "b24eedcd",
-    "len": 2899
-  },
-  "tools/check-shell-purity.js": {
-    "hash": "1cef6761",
-    "len": 5257
+    "hash": "1f68c9c9",
+    "len": 2983
   }
 }

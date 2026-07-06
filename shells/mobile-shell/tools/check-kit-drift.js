@@ -19,7 +19,10 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SHELL_ROOT = path.resolve(HERE, '..');                 // mobile-shell/
 const BASELINE = path.join(HERE, 'kit-drift.baseline.json');
-const SKIP = new Set(['tools/kit-drift.baseline.json']);     // baseline 自身不入账
+const SKIP = new Set([
+  'tools/kit-drift.baseline.json',      // baseline 自身不入账
+  'tools/check-shell-purity.js',        // 项目可配置工具（三 knob 各项目自填）→ 属项目层，不算副本漂移
+]);
 
 function djb2(s) {
   let h = 5381;

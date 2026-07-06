@@ -77,6 +77,14 @@ const isForbiddenClass = n => !ALLOW.has(n) && (moduleClasses.has(n) || MODULE_P
 
 const files = [];
 await walk(SHELL_ROOT, files);
+// 空扫防呆：SHELL_ROOT 不存在 / cwd 不对时 walk 得到 []，若不拦会「扫 0 文件仍 PASS」的假绿。
+if (files.length === 0) {
+  const cwd = (typeof process !== 'undefined' && process.cwd) ? process.cwd() : '?';
+  log(`shell-purity: 在 '${SHELL_ROOT}/' 下未找到任何壳文件——多半 cwd 不对（当前 cwd: ${cwd}）。`);
+  log(`  正确跑法：cd 到 '${SHELL_ROOT}' 的父目录再跑，例如 (cd shells && node mobile-shell/tools/check-shell-purity.js)。`);
+  log('RESULT: FAIL');
+  if (typeof process !== 'undefined' && process.exit) process.exit(1);
+}
 const hits = [];
 for (const f of files) {
   const rel = f.slice(SHELL_ROOT.length + 1);
@@ -87,11 +95,23 @@ for (const f of files) {
     let m; const dotRe = /\.([a-z][a-z0-9-]*)/g;
     while ((m = dotRe.exec(src)) !== null)
       if (isForbiddenClass(m[1])) hits.push({ f, line: lineOf(src, m.index), kind: 'module-class', match: '.' + m[1] });
-    // 类名上下文 b：class="a b c"
-    const attrRe = /class\s*=\s*"([^"]*)"/g;
+    // 类名上下文 b：class="a b c" / class='a b c'（单双引号）
+    const attrRe = /class\s*=\s*["']([^"']*)["']/g;
     while ((m = attrRe.exec(src)) !== null)
       for (const t of m[1].split(/\s+/))
         if (t && isForbiddenClass(t)) hits.push({ f, line: lineOf(src, m.index), kind: 'module-class', match: 'class=' + t });
+    // 类名上下文 c：el.className = 'a b c'（JS 字符串赋值，单/双/反引号）
+    const cnRe = /className\s*=\s*["'`]([^"'`]*)["'`]/g;
+    while ((m = cnRe.exec(src)) !== null)
+      for (const t of m[1].split(/\s+/))
+        if (t && isForbiddenClass(t)) hits.push({ f, line: lineOf(src, m.index), kind: 'module-class', match: 'className=' + t });
+    // 类名上下文 d：classList.add/remove/toggle/replace('name', …)（裸类名，无点，上下文 a 漏）
+    const clRe = /classList\s*\.\s*(?:add|remove|toggle|replace|contains)\(([^)]*)\)/g;
+    while ((m = clRe.exec(src)) !== null) {
+      let s; const argRe = /["'`]([a-z][a-z0-9-]*)["'`]/g;
+      while ((s = argRe.exec(m[1])) !== null)
+        if (isForbiddenClass(s[1])) hits.push({ f, line: lineOf(src, m.index), kind: 'module-class', match: 'classList:' + s[1] });
+    }
   }
   for (const w of FORBID_WORDS) {
     let i = -1;
