@@ -1,0 +1,91 @@
+/* ============================================================
+   Prototype Kit · 外壳（viewer）样式 —— 与业务解耦
+   顶栏 / 双端设备框(iPhone·iPad) / 交互视图 / 参考平铺视图 / 缩放控件 / 左侧索引
+   屏幕内部样式见 screen.css（在各 iframe 内加载）
+   ============================================================ */
+:root[data-mode="light"] { --stage-bg: #E7E2D8; --stage-dot: #CFC8B9; }
+:root[data-mode="dark"]  { --stage-bg: #0F0E0A; --stage-dot: #211E17; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); overflow: hidden; -webkit-font-smoothing: antialiased; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+
+/* ---------- 顶栏 ---------- */
+.topbar { position: absolute; top: 0; left: 0; right: 0; height: 58px; z-index: 50; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-5); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: saturate(1.4) blur(16px); border-bottom: 1px solid var(--hairline); }
+.brand { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.brand .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-family: var(--font-display, var(--font-sans)); font-weight: 700; box-shadow: 0 6px 16px -6px var(--accent-glow, transparent); }
+.brand b { font-family: var(--font-display, var(--font-sans)); font-weight: 700; letter-spacing: -0.01em; font-size: 15px; }
+.brand .sub { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+
+.seg { display: inline-flex; background: var(--bg-2); border-radius: var(--r-full); padding: 3px; gap: 2px; }
+.seg button { font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--ink-2); padding: 7px 13px; border-radius: var(--r-full); display: inline-flex; align-items: center; gap: 6px; }
+.seg button svg { width: 14px; height: 14px; }
+.seg button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+.seg.view { margin-left: 10px; }
+.spacer { margin-left: auto; }
+.topbar .hint { font-size: 12px; color: var(--ink-3); margin-right: var(--sp-2); }
+@media (max-width: 880px) { .topbar .hint { display: none; } }
+
+.switcher { display: flex; align-items: center; gap: 7px; }
+.swatch-btn { width: 24px; height: 24px; border-radius: var(--r-full); border: 2px solid transparent; cursor: pointer; padding: 0; transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.swatch-btn[aria-pressed="true"] { transform: scale(1.12); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px currentColor; color: var(--ink); }
+.mode-toggle { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--hairline-2); background: var(--surface); color: var(--ink-2); border-radius: var(--r-full); padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.mode-toggle:hover { color: var(--ink); border-color: var(--ink-3); }
+.mode-toggle svg { display: block; }
+
+/* ---------- 工作台 ---------- */
+.viewer { position: absolute; inset: 58px 0 0 0; display: flex; }
+.rail { width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--hairline); padding: var(--sp-4) var(--sp-3); overflow-y: auto; }
+.viewer:not(.ref) .rail { display: none; }
+.viewer:not(.ref) .zoomctl { display: none; }
+.rail .rt { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; padding: 4px 10px 10px; }
+.rail .ri { display: flex; align-items: center; gap: 11px; padding: 10px 11px; border-radius: var(--r-sm); cursor: pointer; color: var(--ink-2); }
+.rail .ri:hover { background: var(--bg-2); color: var(--ink); }
+.rail .ri.on { background: var(--accent-soft); color: var(--accent-ink); }
+.rail .ri .idx { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); width: 18px; }
+.rail .ri.on .idx { color: var(--accent-ink); }
+.rail .ri .nm { font-size: 14px; font-weight: 600; }
+.rail .grp { font-size: 11px; color: var(--ink-4, var(--ink-3)); padding: 16px 10px 6px; font-weight: 700; letter-spacing: 0.04em; }
+
+.stage { flex: 1; position: relative; overflow: auto; background-color: var(--stage-bg); background-image: radial-gradient(var(--stage-dot) 1.4px, transparent 1.4px); background-size: 24px 24px; transition: background-color var(--dur) var(--ease); }
+.stage.is-ref { cursor: grab; }
+.stage.is-ref.panning { cursor: grabbing; }
+
+/* 缩放控件（仅参考视图）*/
+.zoomctl { position: absolute; right: 18px; bottom: 18px; z-index: 30; display: flex; align-items: center; gap: 2px; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--hairline); border-radius: var(--r-full); padding: 4px; box-shadow: var(--shadow-md); backdrop-filter: blur(8px) saturate(1.2); }
+.zoomctl button { width: 30px; height: 30px; border: none; background: transparent; color: var(--ink-2); border-radius: var(--r-full); cursor: pointer; display: grid; place-items: center; }
+.zoomctl button:hover { background: var(--bg-2); color: var(--ink); }
+.zoomctl button svg { width: 16px; height: 16px; }
+.zoomctl .pct { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); min-width: 46px; text-align: center; cursor: pointer; user-select: none; }
+.zoomctl .pct:hover { color: var(--ink); }
+
+/* ---------- 交互视图：设备并排居中 ---------- */
+.frames { min-height: 100%; min-width: 100%; display: flex; align-items: center; justify-content: center; gap: 56px; padding: 40px; }
+.fit { display: flex; flex-direction: column; align-items: center; gap: 14px; flex-shrink: 0; }
+.fit .box, .bcard .box { position: relative; }
+.fit .box .dev, .bcard .box .dev { position: absolute; top: 0; left: 0; transform-origin: top left; }
+.dev-cap { font-size: 12px; color: var(--ink-2); font-family: var(--font-mono); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.dev-cap .d { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* ---------- 参考视图：所有屏 × 状态 × 设备平铺 ---------- */
+.board-world { position: relative; transform-origin: top left; }
+.board { transform-origin: top left; width: max-content; padding: 34px 44px 100px; min-height: 100%; }
+.bsec { margin-bottom: 50px; }
+.bsec-head { display: flex; align-items: baseline; gap: 10px; }
+.bsec-head .idx { font-family: var(--font-mono); font-size: 12px; color: var(--accent-ink); background: var(--accent-soft); padding: 3px 9px; border-radius: var(--r-full); }
+.bsec-head .nm { font-family: var(--font-display, var(--font-sans)); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+.bsec-head .gp { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+.bdev { margin-top: 20px; }
+.bdev-lab { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
+.bdev-lab .d { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.brow { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; }
+.bcard { display: flex; flex-direction: column; gap: 10px; }
+.bcap { font-size: 12px; color: var(--ink-2); font-family: var(--font-mono); }
+
+/* ---------- 设备框 ---------- */
+.dev-iphone { width: 418px; height: 872px; border-radius: 62px; padding: 14px; background: linear-gradient(150deg, #3A3A3E 0%, #1C1C1F 38%, #2B2B2F 60%, #131316 100%); box-shadow: 0 0 0 2px #060607, inset 0 0 0 2px rgba(255,255,255,0.10), 0 28px 60px -12px rgba(10,14,22,0.5); position: relative; }
+.dev-iphone .scr { width: 390px; height: 844px; border-radius: 50px; overflow: hidden; background: var(--bg); position: relative; }
+.dev-iphone iframe { width: 390px; height: 844px; border: 0; display: block; background: var(--bg); }
+.dev-ipad { width: 1212px; height: 852px; border-radius: 34px; padding: 16px; background: linear-gradient(150deg, #3A3A3E 0%, #1C1C1F 40%, #2B2B2F 60%, #131316 100%); box-shadow: 0 0 0 2px #060607, inset 0 0 0 2px rgba(255,255,255,0.10), 0 28px 60px -12px rgba(10,14,22,0.5); position: relative; }
+.dev-ipad .scr { width: 1180px; height: 820px; border-radius: 20px; overflow: hidden; background: var(--bg); position: relative; }
+.dev-ipad iframe { width: 1180px; height: 820px; border: 0; display: block; background: var(--bg); }
+.dev-ipad::after { content: ""; position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #1d2433 0 32%, #05060a 60%); }

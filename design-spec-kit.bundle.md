@@ -3,7 +3,7 @@
 # 用途：当目标项目只能「一个个上传文件」、没有 git 时，只上传/粘贴本文件这一个即可。
 #
 # ★ 给落位执行者（读到本文件请执行）：
-#   1. 下面用 ⟦FILE 路径⟧ … ⟦/FILE⟧ 包了 30 个文件（含版本 pin）。把每段内容【原样、逐字】写到它的「路径」（含子目录）。
+#   1. 下面用 ⟦FILE 路径⟧ … ⟦/FILE⟧ 包了 31 个文件（含版本 pin）。把每段内容【原样、逐字】写到它的「路径」（含子目录）。
 #   2. 其中 design-spec-kit/CLAUDE.template.md 写出后，复制到【项目根目录】改名 CLAUDE.md（这是会被自动加载的契约）。
 #   3. .design-spec-kit.version 写到【项目根目录】（与 CLAUDE.md 同级，不进 design-spec-kit/ 子目录）——它是版本 pin，kit-doctor 靠它判断落后几个版本。
 #   4. 全部落位后，打开 design-spec-kit/AI-BOOTSTRAP.md，按它的「首条指令」走（先读、再问基调、再安装、再跑 kit-doctor）。
@@ -23,23 +23,24 @@
 #   11. design-spec-kit/docs/DEVIATION-LEDGER.template.md
 #   12. design-spec-kit/docs/IMPL-PROFILE.template.md
 #   13. design-spec-kit/docs/SCREEN-MANIFEST.template.md
-#   14. design-spec-kit/docs/VERSIONING.md
-#   15. design-spec-kit/docs/config.template.json
-#   16. design-spec-kit/docs/screen-manifest.schema.json
-#   17. design-spec-kit/package.json
-#   18. design-spec-kit/tools/build-bundle.js
-#   19. design-spec-kit/tools/check-changelog.js
-#   20. design-spec-kit/tools/check-deviation.js
-#   21. design-spec-kit/tools/check-i18n.js
-#   22. design-spec-kit/tools/check-icons.js
-#   23. design-spec-kit/tools/check-manifest.js
-#   24. design-spec-kit/tools/check-orphan-css.js
-#   25. design-spec-kit/tools/check-tokens.js
-#   26. design-spec-kit/tools/ci-check.js
-#   27. design-spec-kit/tools/install-git-hooks.js
-#   28. design-spec-kit/tools/kit-doctor.js
-#   29. design-spec-kit/tools/run-checks.js
-#   30. .design-spec-kit.version
+#   14. design-spec-kit/docs/SHELL-KIT.md
+#   15. design-spec-kit/docs/VERSIONING.md
+#   16. design-spec-kit/docs/config.template.json
+#   17. design-spec-kit/docs/screen-manifest.schema.json
+#   18. design-spec-kit/package.json
+#   19. design-spec-kit/tools/build-bundle.js
+#   20. design-spec-kit/tools/check-changelog.js
+#   21. design-spec-kit/tools/check-deviation.js
+#   22. design-spec-kit/tools/check-i18n.js
+#   23. design-spec-kit/tools/check-icons.js
+#   24. design-spec-kit/tools/check-manifest.js
+#   25. design-spec-kit/tools/check-orphan-css.js
+#   26. design-spec-kit/tools/check-tokens.js
+#   27. design-spec-kit/tools/ci-check.js
+#   28. design-spec-kit/tools/install-git-hooks.js
+#   29. design-spec-kit/tools/kit-doctor.js
+#   30. design-spec-kit/tools/run-checks.js
+#   31. .design-spec-kit.version
 #
 # ════════════════════════════════════════════════════════════
 
@@ -195,6 +196,8 @@ node tools/ci-check.js
 > 底座对壳一无所知;**壳单向依赖底座**。本文讲一个壳怎么干净地接进来,以及怎么自己造一个新壳。
 >
 > ⚠ 分清两个扩展轴:**呈现壳**(设计原型长什么外壳)接入看本文件;**实现栈**(Flutter / React / 原生等真实实现怎么对账还原)接入看 [`HANDOFF.md`](HANDOFF.md) + `docs/IMPL-PROFILE.template.md`——两轴正交,互不依赖。
+>
+> kit 随包 ship 一个 canonical 壳骨架 [`shells/mobile-shell/`](../shells/mobile-shell/)(business-free 移动端),既是参考实现也是可直接接入的组件——分发形态、kit 层 vs 项目层边界、canonical / 拷贝收敛见 [`docs/SHELL-KIT.md`](docs/SHELL-KIT.md)。
 
 ---
 
@@ -222,7 +225,7 @@ node tools/ci-check.js
 | 改了壳资产(壳 CSS / JS 本身) | 跑壳自带的 `check-shell-purity.js` 守「壳永不指名业务」 | 🤖 |
 | 改了外壳机制(路由 / 转场 / 画布) | 跑壳自带的 `check-kit-drift.js` 守外壳同源 | 🤖 |
 
-> `check-shell-purity.js` 是**壳纯度 guard**:壳里出现任何业务名字(模块前缀类 / 业务全局 / 业务词,含注释)即 FAIL,守「壳单向依赖底座、永不反向依赖业务」。模块类名从项目 `design-system/modules/*.css` 自动派生 + 业务词名单机检;ALLOW 白名单(壳唯一可指名的基础层 / 壳层类名)在壳 README 声明。只在**要保持壳 business-free** 时需要。参考实现见 `mobile-shell`。
+> `check-shell-purity.js` 是**壳纯度 guard**:壳里出现任何业务名字(模块前缀类 / 业务全局 / 业务词,含注释)即 FAIL,守「壳单向依赖底座、永不反向依赖业务」。模块类名从项目 `design-system/modules/*.css` 自动派生 + 业务词名单机检;ALLOW 白名单(壳唯一可指名的基础层 / 壳层类名)在壳 README 声明。只在**要保持壳 business-free** 时需要。参考实现见 kit 自带的 [`shells/mobile-shell/`](../shells/mobile-shell/)。
 > `check-kit-drift.js` 是**壳同源 guard**,只在「复制式复用了壳」的项目里需要。
 > ⚠ 两者正交:纯度守「壳不指名业务」(引用式 / 复制式都要)、同源守「复制的壳副本没被就地改」(仅复制式)。若项目是**引用**壳(屏直接 `link ../<壳>/assets/*`、不复制),就**没有副本→没有副本漂移**,`check-kit-drift.js` 自动退役——纯度 guard 与底座的两个 guard 仍照常守。
 
@@ -238,7 +241,7 @@ node tools/ci-check.js
 ## 造一个新壳的最小清单
 1. 壳目录里所有 CSS/组件**只用 `var(--*)`**,自带一份占位 `tokens.css` 仅供独立 demo。
 2. 写一份壳 README:它解决什么平台、屏怎么登记、有哪些现成能力(别让人重画),并声明 **ALLOW 白名单**——壳唯一可指名的基础层 / 壳层类名。
-3. 若壳要 **business-free**(单向依赖底座、永不指名业务),带一个 `check-shell-purity.js`:模块类名从项目 `design-system/modules/*.css` 自动派生 + 业务词名单机检,壳内冒出任何业务名字即 FAIL;ALLOW 白名单与壳 README 同一份。加新挂钩须同步 ALLOW + README 契约段。参考实现见 `mobile-shell`。
+3. 若壳要 **business-free**(单向依赖底座、永不指名业务),带一个 `check-shell-purity.js`:模块类名从项目 `design-system/modules/*.css` 自动派生 + 业务词名单机检,壳内冒出任何业务名字即 FAIL;ALLOW 白名单与壳 README 同一份。加新挂钩须同步 ALLOW + README 契约段。参考实现见 kit 自带的 [`shells/mobile-shell/`](../shells/mobile-shell/)。
 4. 若是复制式复用,再带一个 `check-kit-drift.js`;引用式不需要。
 5. 给出要追加到底座的:DoD 平台行 + CLAUDE.md 平台小节 + 架构 doc。
 6. 确认壳目录已进 `check-tokens.js` 的 `SCAN_ROOTS`——纳入漂移防线。
@@ -990,6 +993,60 @@ guard 盲区 59%（死 CSS + i18n 覆盖——v1 三个 guard 全是「新增侧
   }
 }
 ```
+⟦/FILE⟧
+
+⟦FILE design-spec-kit/docs/SHELL-KIT.md⟧
+# SHELL-KIT：kit 自带的可插拔壳骨架
+
+> design-spec-kit 的**方法底座**(契约 + DoD + token 纪律 + guard)本身对呈现一无所知。
+> 但 kit 仓**随包 ship 一个可选的壳骨架**放在 `shells/`,作为"怎么把设计跑成平台原型"的 **canonical 参考实现**。
+> 当前只有 `shells/mobile-shell/`(移动端最刚需);桌面 / Web 等以后按同一规范平级加 `shells/<name>/`。
+>
+> 关系一句话:**底座不依赖壳(依赖方向),但 kit 仓可以分发壳(分发形态)**——两者不矛盾,像框架 core 不依赖 starter、仓库却 ship 官方 starter。
+
+---
+
+## 一、边界:哪些是 kit 层(通用·别动),哪些是项目层(各自填)
+
+壳骨架里的东西分两类,搬用时分清:
+
+| | kit 层(canonical·通用) | 项目层(消费项目各自) |
+|---|---|---|
+| 运行时 | `assets/{app,screen,pages,sheet,pull-refresh,i18n}.*`——壳内核,原样用 | —— |
+| 视觉 | `assets/{tokens,spec}.css`——**占位 demo 视觉**,仅供壳独立跑 | 真接入时屏 link 项目 `design-system/{tokens,spec}.css`,不复制占位 |
+| 样板屏 | `screens/{_template,home,detail}.html`——中性 demo 屏 | 业务屏在项目 `pages/`,**不进 kit** |
+| 纯度 guard | `tools/check-shell-purity.js` 的**逻辑 + ALLOW 白名单**(壳挂钩契约) | guard 顶部三 knob `MODULE_PREFIX_RE`/`FORBID_WORDS`/`MODULES_DIR`——**每个项目填自己的业务名单**(kit canonical 留中性/空) |
+| 同源 guard | `tools/check-kit-drift.js` + `kit-drift.baseline.json` | 仅"复制式复用"项目需要 |
+
+**约束(硬)**:kit `shells/mobile-shell/` **零业务**——无业务屏、无业务类名(`rb-*` 等)、无业务词。纯度 guard 的 hirobot 实例值只作**注释示例**保留,配置本体中性。
+
+---
+
+## 二、两种接入方式
+
+1. **引用式(推荐·无副本)**:业务屏直接 `link ../shells/mobile-shell/assets/{screen.css,screen.js}` + 项目 `design-system/{tokens,spec}.css`。无壳副本 → 无副本漂移,`check-kit-drift` 免跑;只需按你项目填 `check-shell-purity` 三 knob 后照跑。
+2. **复制式(设计侧原型必走)**:把 `shells/mobile-shell/` 拷进项目树(如 claude.ai/design 的自包含原型环境没法引用外部 kit)。拷贝由 `check-kit-drift.js` 对着 canonical baseline 守"没被就地改";改壳走上游(见下)。
+
+---
+
+## 三、canonical 与拷贝的收敛
+
+- **kit `shells/mobile-shell/` = 唯一真源**(随 kit 版本走)。
+- 设计侧原型 / 复制式项目持**下游拷贝**,`check-kit-drift` 守同源。
+- **改壳只在 kit 改** → 重生 `kit-drift.baseline.json` → 再同步下发到各拷贝。**绝不就地补丁拷贝**(drift guard 会报红)。
+- 业务名单是项目层:各拷贝的 `check-shell-purity` 三 knob 可以各自项目化,**不算 drift**(drift 只守运行时 + demo 屏的字节同源;guard config 属项目层,不进 kit-drift baseline 的比对口径)。
+
+---
+
+## 四、扩展:加一个新壳
+
+照 [`EXTENDING.md`](../EXTENDING.md)「造一个新壳的最小清单」,在 `shells/` 下平级加 `shells/desktop-shell/` 等:通用内核("一套屏源两种呈现" + postMessage + 画布 + 主题广播)可复用,换设备框 + chrome 注入即换平台。所有壳**共用项目同一份 tokens.css**,底座保证它们说同一套设计语言。
+
+---
+
+## Promote 记录
+
+- **2026-07-06**:`mobile-shell` 从 hirobot 原型 promote 进 kit `shells/mobile-shell/` 当 canonical。generalize = 纯度 guard 三 knob 中性化(hirobot 值转注释示例)+ 两处业务举例注释改中性;运行时 / demo 屏 / 占位视觉原样。纯度 + kit-drift guard 均 PASS。此后 hirobot 原型那份降级为 kit 的下游拷贝。
 ⟦/FILE⟧
 
 ⟦FILE design-spec-kit/docs/VERSIONING.md⟧

@@ -1,0 +1,70 @@
+{
+  "README.md": {
+    "hash": "c9fa2fc2",
+    "len": 5062
+  },
+  "assets/app.js": {
+    "hash": "3db131b4",
+    "len": 20882
+  },
+  "assets/i18n.js": {
+    "hash": "9d07c3d6",
+    "len": 3886
+  },
+  "assets/pages.css": {
+    "hash": "ec907000",
+    "len": 8657
+  },
+  "assets/pull-refresh.js": {
+    "hash": "1f35cdab",
+    "len": 4298
+  },
+  "assets/screen.css": {
+    "hash": "e83be652",
+    "len": 6497
+  },
+  "assets/screen.js": {
+    "hash": "2fa94ac5",
+    "len": 6476
+  },
+  "assets/sheet.js": {
+    "hash": "0d48c406",
+    "len": 9747
+  },
+  "assets/spec.css": {
+    "hash": "d94dae0b",
+    "len": 22725
+  },
+  "assets/tokens.css": {
+    "hash": "818d61f3",
+    "len": 4416
+  },
+  "docs/PROTOTYPE-ARCH.md": {
+    "hash": "fe545cfb",
+    "len": 7027
+  },
+  "index.html": {
+    "hash": "601ed61d",
+    "len": 5124
+  },
+  "screens/_template.html": {
+    "hash": "eeab021a",
+    "len": 2953
+  },
+  "screens/detail.html": {
+    "hash": "b2084934",
+    "len": 3332
+  },
+  "screens/home.html": {
+    "hash": "d7c0b990",
+    "len": 5768
+  },
+  "tools/check-kit-drift.js": {
+    "hash": "b24eedcd",
+    "len": 2899
+  },
+  "tools/check-shell-purity.js": {
+    "hash": "1cef6761",
+    "len": 5257
+  }
+}

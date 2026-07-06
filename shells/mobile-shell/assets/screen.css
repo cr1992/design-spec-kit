@@ -1,0 +1,136 @@
+/* ============================================================
+   单屏内部样式（每个 screens/*.html 独立加载）
+   依赖 tokens.css + spec.css。负责：屏幕骨架 / 固定导航栏 /
+   iOS chrome / 抽屉层级 / 空状态 / 多状态显隐
+   ============================================================ */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-sans);
+  position: relative; overflow: hidden;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+/* 多状态显隐：默认隐藏带 data-when 的块，命中态加 .show */
+[data-when]:not(.show) { display: none !important; }
+
+/* ---------- 原型假 Home 指示条的底部安全区 ----------
+   iframe 里 env(safe-area-inset-bottom) 恒为 0，但屏内画了假 Home 指示条；
+   故在 chrome 层给一个原型专用底部留白 --safe-b。底栏/弹层用
+   max(env(...), var(--safe-b)) 消费：原型取此留白，真机/Flutter 由 env() 接管。
+   展示页（设计规范/组件库）不链 screen.css → --safe-b 未定义 → 回落 0px。 */
+:root { --safe-b: 22px; }
+:root[data-device="pad"] { --safe-b: 16px; }
+
+/* ---------- iOS chrome（屏内自绘）---------- */
+.dynamic-island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 122px; height: 35px; border-radius: var(--r-full);
+  background: #000; z-index: 40; pointer-events: none;
+}
+.dynamic-island::after {
+  content: ""; position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+  width: 9px; height: 9px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #1d2433 0 32%, #05060a 60%);
+}
+.status-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 30px 0; font-family: var(--font-sans); pointer-events: none;
+}
+.status-bar .time { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; }
+.status-bar .stat { display: flex; align-items: center; gap: 7px; color: var(--ink); }
+.status-bar .stat svg { display: block; height: 14px; width: auto; }
+.home-indicator {
+  position: absolute; left: 50%; bottom: 9px; transform: translateX(-50%);
+  width: 138px; height: 5px; border-radius: var(--r-full);
+  background: var(--ink); opacity: 0.32; z-index: 45;
+}
+
+/* ---------- iPad chrome（横屏：状态栏全宽、无灵动岛、Home 条更宽）---------- */
+:root[data-device="pad"] .status-bar { height: 44px; padding: 10px 44px 0; }
+:root[data-device="pad"] .status-bar .time { font-size: 15px; }
+:root[data-device="pad"] .home-indicator { width: 240px; bottom: 8px; }
+:root[data-device="pad"] .pg > .app-top { padding-top: calc(44px + var(--sp-1)); }
+
+/* iPad master-detail：列背景 / 竖分隔线直抵顶边，状态栏悬浮其上 —— 消除顶部割裂感。
+   旧做法各屏 .lay-pad 用 padding-top:44px 预留状态栏带，但该带露出的是 body 冷灰底色，
+   与白色侧栏 / 详情之间形成横向接缝。改为：列直达顶边，仅各列内容下移让出状态栏；
+   下移量 = 该列原顶内边距 + 44px，故所有内容位置不变，仅背景上延填满原灰带。
+   挂钩契约（business-free 铁律）：本块只指名壳层/基础层名字（.lay-pad/.rail/.pad-list-head/
+   .pad-detail-bar/.pad-main .inner/[data-detail-empty]/.lr-card），永不指名业务模块前缀类；
+   业务屏的详情头元素挂 pad-detail-bar 即接入状态栏让位。 */
+:root[data-device="pad"] .lay-pad { padding-top: 0; }
+:root[data-device="pad"] .lay-pad .rail { padding-top: calc(var(--sp-5) + 44px); }
+:root[data-device="pad"] .pad-list-head { padding-top: calc(var(--sp-4) + 44px); }
+:root[data-device="pad"] .pad-detail-bar { padding-top: calc(var(--sp-4) + 44px); }
+:root[data-device="pad"] .pad-main .inner { padding-top: calc(var(--sp-6) + 44px); }
+:root[data-device="pad"] [data-detail-empty] { padding-top: 44px; }
+
+/* iPad 列表头标题：统一行高 38px（= 头内图标钮高度）。
+   各屏 .pad-list-head 的标题行内容不一（带 38px 图标钮 → 行高 38；纯标题 → 行高 ~31），
+   align-items:center 下标题垂直位置随行高漂移（跨屏差 ~3.5px）。把标题自身行盒钉成 38px，
+   使其与按钮等高、成为最高元素 → 标题顶恒为 headPadTop，跨 tab 切换标题位置一致。 */
+:root[data-device="pad"] .pad-list-head .ttl { line-height: 38px; }
+/* 同理：详情头 .pad-detail-bar 标题——有无 38px 图标钮令标题字形垂直漂移；
+   钉死标题行盒 = 钮高 38px → 详情标题跨屏一致。 */
+:root[data-device="pad"] .pad-detail-bar .nm { line-height: 38px; }
+
+/* iPad 卡内行选中高亮不贴卡边：列表卡纵向补 sp-2（横向已有卡 sp-4 内距，.lr-card 默认仅 4px）。
+   恒定上下内距，不随选中态切换 → 选中在卡间移动时 padding 不变，消除页面抖动。手机不受影响。 */
+:root[data-device="pad"] .lr-card { padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+
+/* ---------- 页面骨架：覆盖式固定头 + 在其下穿行的滚动内容 ----------
+   固定头从「占位的 flex 行」改为「悬浮覆盖层」：内容（含状态栏区）从它
+   下方穿行；静止时是干净实底，滚动后浮起为毛玻璃，透出底下的内容。
+   --top-h 由 screen.js 实测固定头高度后写到 .pg 上，供滚动留白用。 */
+.pg { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.pg > .app-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(18px);
+  backdrop-filter: saturate(1.4) blur(18px);
+  padding-top: calc(54px + var(--sp-1));
+  transition: background var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease),
+              backdrop-filter var(--dur) var(--ease);
+}
+/* 滚动后：毛玻璃更实、柔和发丝浮起，覆盖到状态栏，透出下方内容 */
+.pg.scrolled > .app-top {
+  background: color-mix(in srgb, var(--bg) 76%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(22px);
+  backdrop-filter: saturate(1.6) blur(22px);
+  box-shadow: 0 6px 16px -12px color-mix(in srgb, var(--ink) 30%, transparent),
+              0 0.5px 0 color-mix(in srgb, var(--hairline) 55%, transparent);
+}
+.app-scroll {
+  flex: 1 1 auto; min-height: 0; position: relative;
+  overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+  padding-top: var(--top-h, 96px);
+}
+.app-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.app-scroll > :last-child { margin-bottom: 92px; }
+.pg.has-dock .app-scroll > :last-child { margin-bottom: 120px; }
+
+/* ---------- 抽屉（盖住覆盖式顶栏，状态栏之下）---------- */
+.pg.drawer-stage.open .drawer { transform: translateX(0); }
+.pg.drawer-stage.open .scrim { opacity: 1; pointer-events: auto; }
+.pg .scrim { z-index: 24; }            /* 盖过覆盖式顶栏(20) */
+.pg .drawer { z-index: 26; padding-top: 46px; }
+
+/* ---------- 空状态 ---------- */
+.empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: var(--sp-4); padding: 0 var(--sp-10);
+}
+.empty .ill {
+  width: 72px; height: 72px; border-radius: var(--r-full);
+  background: var(--bg-2); color: var(--ink-2);
+  display: grid; place-items: center;
+}
+.empty .ill svg { width: 30px; height: 30px; }
+.empty h3 { font-family: var(--font-serif); font-size: 20px; font-weight: 600; color: var(--ink); margin: 0; }
+.empty p { font-size: 13.5px; line-height: 1.7; color: var(--ink-3); margin: 0; max-width: 24ch; }
+.empty .btn { margin-top: var(--sp-2); }
