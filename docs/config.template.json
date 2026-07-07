@@ -1,4 +1,7 @@
 {
+  "runner": {
+    "checkCommand": "node tools/design-spec-kit/tools/run-checks.js"
+  },
   "kit": {
     "layers": [
       "base"
@@ -116,7 +119,9 @@
     "check-manifest": {
       "manifestDir": "docs/design-spec/manifests",
       "schemaPath": "docs/design-spec/screen-manifest.schema.json",
-      "screensListPath": "docs/design-spec/screens.txt"
+      "screensListPath": "docs/design-spec/screens.txt",
+      "sourceManifestDir": "",
+      "sourceManifestSuffix": ".manifest.json"
     },
     "check-deviation": {
       "implRoots": [],

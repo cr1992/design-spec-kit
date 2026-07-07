@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- [还原层] `check-manifest` 支持可选 `sourceManifestDir` / `sourceManifestSuffix`：对设计侧语义源 manifest 与 generated 的 `version`、anchors、designed/delegated states 做双向漂移检查，防止生成物过期但 schema 仍 PASS。
+- [工程] `kit-doctor` 支持非 npm runner：业务仓可在 `docs/design-spec/config.json` 配 `runner.checkCommand`，doctor 优先识别该入口，不再把 Makefile / bun / 其他 runner 项目误报为入口接线 WARN。
 - [壳] kit 随包 ship canonical 壳骨架 `shells/mobile-shell/`(business-free 移动端,从 hirobot 原型 promote):通用运行时 + 中性 demo 屏 + 占位视觉 + 纯度 / 同源 guard。新增 `docs/SHELL-KIT.md` 划清 kit 层(通用运行时)vs 项目层(纯度 config 各自填)、两种接入方式、canonical / 拷贝收敛。`check-shell-purity.js` 三 knob(`MODULE_PREFIX_RE`/`FORBID_WORDS`/`MODULES_DIR`)中性化,hirobot 值转注释示例;纯度 + kit-drift guard 均 PASS。桌面等壳后续 `shells/<name>/` 平级加。
 - [文档] `EXTENDING.md` 补壳纯度维:「造新壳最小清单」加 business-free 纯度 guard(`check-shell-purity.js`)+ ALLOW 白名单要求;挂钩②的 DoD guard 表加可选 `check-shell-purity.js` 行,指向 `mobile-shell` 参考实现。明确它与 `check-kit-drift.js` 正交——纯度守「壳永不指名业务」(引用 / 复制式都要)、同源守「复制副本没被就地改」(仅复制式)。
 

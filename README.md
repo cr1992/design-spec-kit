@@ -99,6 +99,16 @@ submodule 接入**不建** `.design-spec-kit.version`——版本 pin 就是 sub
 
 `docs/config.template.json` 是配置模板。`run-checks.js`、`kit-doctor.js` 和各 guard 会优先读取业务仓的 `docs/design-spec/config.json`；没有配置时才回退 kit 源码默认值。
 
+非 npm 项目可以在 `docs/design-spec/config.json` 里声明 runner，`kit-doctor` 会优先识别它：
+
+```json
+{
+  "runner": {
+    "checkCommand": "make design-spec-check"
+  }
+}
+```
+
 ## 检查命令
 
 ```bash
@@ -136,6 +146,8 @@ npm run hooks:install
 ## 还原交接
 
 启用还原交接层后，每个实现栈需要填一份 `IMPL-PROFILE`，每个屏幕需要生成一份 `*.manifest.generated.json`。guard 只认生成物，不认手写草稿。
+
+如果项目同时保留设计侧语义源 manifest，可在 `check-manifest` 配置 `sourceManifestDir`。启用后 guard 会检查源 manifest 与 generated 的 `version`、`elements[].anchor`、`states.designed` 和 `states.delegated` 是否一致，防止生成物落后但 schema 仍 PASS。
 
 偏离设计的实现必须登记到 `DEVIATION-LEDGER`。标准状态类（loading、error、empty、offline 等）不算偏离，但必须在 manifest 的状态空间里覆盖。
 

@@ -26,6 +26,8 @@ if (typeof readFile !== 'function') {
  *        · state_classes.exempt 每条带 note（schema 已管，此处双保险）  → FAIL
  *        · states.delegated[].contract_ref === 'TBD'                 → WARN（显式待裁决信号，不 FAIL）
  *   ④ SCREENS_LIST_PATH 配置时：清单里每个 screen-id 必须有对应 manifest → FAIL（覆盖率对账）
+ *   ⑤ SOURCE_MANIFEST_DIR 配置时：设计侧语义源 manifest 与 generated 的 version / anchor /
+ *      designed state / delegated state 双向一致 → FAIL（防生成物过期但 schema 仍 PASS）
  *
  * 怎么跑：AI 沙箱 = read_file 本文件整段粘进 run_script（helper readFile/ls/log）；node/CI = node tools/check-manifest.js。
  *   末行 `RESULT: PASS|FAIL`；FAIL 时 node 置退出码 1，带「修法」提示。配置见下方「配置」区（★必改已标）。
@@ -51,6 +53,10 @@ const SCHEMA_PATH = cfgValue('schemaPath', 'docs/screen-manifest.schema.json');
 // ★可选：期望屏清单文件——配置了才做覆盖率对账；留空 '' = 关闭覆盖率检查。
 //   载体二选一：① 每行一个 screen-id 的纯文本；② 一个 JSON 数组 ["login","list",...]。
 const SCREENS_LIST_PATH = cfgValue('screensListPath', '');
+// ★可选：设计侧语义 manifest 源目录。配置后按 <screen-id><SOURCE_MANIFEST_SUFFIX> 读取源头，
+// 与 generated 进行漂移对账；留空 '' = 关闭源头漂移检查。
+const SOURCE_MANIFEST_DIR = cfgValue('sourceManifestDir', '');
+const SOURCE_MANIFEST_SUFFIX = cfgValue('sourceManifestSuffix', '.manifest.json');
 
 // 生成物文件名约定（HANDOFF §1.2）
 const MANIFEST_SUFFIX = '.manifest.generated.json';
@@ -166,6 +172,65 @@ function semanticChecks(manifest, fileErrs, fileWarns) {
   });
 }
 
+function sortedUnique(values) {
+  return [...new Set(values
+    .filter((v) => typeof v === 'string' && v.trim())
+    .map((v) => v.trim()))].sort();
+}
+
+function delegatedKey(d) {
+  if (!d || typeof d !== 'object') return '';
+  return [
+    d.state || '',
+    d.to || '',
+    d.contract_ref || '',
+    d.status || '',
+  ].join('|');
+}
+
+function diffSet(label, sourceValues, generatedValues, fileErrs) {
+  const source = sortedUnique(sourceValues);
+  const generated = sortedUnique(generatedValues);
+  const sourceSet = new Set(source);
+  const generatedSet = new Set(generated);
+  const missing = source.filter((v) => !generatedSet.has(v));
+  const extra = generated.filter((v) => !sourceSet.has(v));
+  if (missing.length) fileErrs.push(`source drift: generated 缺 ${label}: ${missing.join(', ')}`);
+  if (extra.length) fileErrs.push(`source drift: generated 多 ${label}: ${extra.join(', ')}`);
+}
+
+function sourceDriftChecks(sourceManifest, generatedManifest, fileErrs) {
+  if (!sourceManifest || !generatedManifest) return;
+
+  if (sourceManifest.version !== generatedManifest.version) {
+    fileErrs.push(`source drift: version 不一致（source=${sourceManifest.version ?? '缺失'} / generated=${generatedManifest.version ?? '缺失'}）`);
+  }
+
+  const sourceElements = Array.isArray(sourceManifest.elements) ? sourceManifest.elements : [];
+  const generatedElements = Array.isArray(generatedManifest.elements) ? generatedManifest.elements : [];
+  diffSet(
+    'anchors',
+    sourceElements.map((el) => el && el.anchor),
+    generatedElements.map((el) => el && el.anchor),
+    fileErrs,
+  );
+
+  const sourceStates = sourceManifest.states || {};
+  const generatedStates = generatedManifest.states || {};
+  diffSet(
+    'designed states',
+    Array.isArray(sourceStates.designed) ? sourceStates.designed.map((s) => s && s.id) : [],
+    Array.isArray(generatedStates.designed) ? generatedStates.designed.map((s) => s && s.id) : [],
+    fileErrs,
+  );
+  diffSet(
+    'delegated states',
+    Array.isArray(sourceStates.delegated) ? sourceStates.delegated.map(delegatedKey) : [],
+    Array.isArray(generatedStates.delegated) ? generatedStates.delegated.map(delegatedKey) : [],
+    fileErrs,
+  );
+}
+
 // ─── 收集工具 ──────────────────────────────────────────────────
 
 async function readDirNames(dir) {
@@ -222,6 +287,13 @@ async function main() {
       semanticChecks(manifest, errs, fw);
       const id = manifest && manifest.screen && manifest.screen.id;
       if (typeof id === 'string' && id) idToFile.set(id, fname);
+      if (SOURCE_MANIFEST_DIR && typeof id === 'string' && id) {
+        const sourcePath = `${SOURCE_MANIFEST_DIR}/${id}${SOURCE_MANIFEST_SUFFIX}`;
+        let sourceManifest = null;
+        try { sourceManifest = JSON.parse(await readFile(sourcePath)); }
+        catch (e) { errs.push(`source drift: 无法读取 / 解析源 manifest ${sourcePath}（${e && e.message}）`); }
+        if (sourceManifest) sourceDriftChecks(sourceManifest, manifest, errs);
+      }
     }
     perFile.push({ file: fname, errs, warns: fw });
   }
@@ -259,7 +331,8 @@ async function main() {
       `  1. schema 违规 → 改「源头」再重生生成物（勿手改 *${MANIFEST_SUFFIX}；HANDOFF §1.2 真源+重生）。`,
       `  2. states 合计为空 → 补 designed 或 delegated（设计可少画不可不表态）。`,
       `  3. anchor 撞名 → 改名并 version+1、记 CHANGELOG（anchor 是对账主键）。`,
-      `  4. 覆盖率缺口 → 为缺屏补 manifest，或从屏清单真源移除该 id。`]);
+      `  4. 覆盖率缺口 → 为缺屏补 manifest，或从屏清单真源移除该 id。`,
+      `  5. source drift → 先同步设计侧语义源，再重生 generated；勿让 generated 落后于 source。`]);
   }
   log(`\n✓ check-manifest: 全部生成物过 schema + 语义规则`);
   log(`\nRESULT: PASS`);

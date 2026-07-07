@@ -27,6 +27,8 @@
 ### 1.2 normalized 规则（载体自由，生成物统一）
 源头怎么维护随项目：可以是单个手写文件，也可以是散在屏文件里的结构化注释 + 索引脚本。但**必须重生为统一机读生成物** `docs/manifests/<screen>.manifest.generated.json`，符合 [`docs/screen-manifest.schema.json`](docs/screen-manifest.schema.json)。guard⑥ 与 T1 **只认生成物**——这是「语言无关」不退化成「每个项目一套解析器」的前提。生成物遵守底座的「真源 + 重生」纪律：改源必重生，勿手改生成物。
 
+如果项目保留了设计侧语义源 manifest（例如 `ui-design/.../docs/manifests/<screen>.manifest.json`），在 `docs/design-spec/config.json` 给 `check-manifest` 配 `sourceManifestDir`。guard⑥ 会把 source 与 generated 的 `version`、锚点和状态集合做双向对账，防止「设计源已变、生成物没重生」的假 PASS。
+
 ### 1.3 状态空间声明（本层的心脏）
 每屏的 `states` 必须显式二分：
 

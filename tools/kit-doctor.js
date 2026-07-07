@@ -12,7 +12,8 @@
  *   ① guard 文件在位 —— 已装层期望的 check-*.js 是否都在 tools/（自身目录）
  *   ② 配置命中探针 —— 仅对启用层 guard 生效；从源码抽取关键配置常量，对 cwd 验证
  *                      「目录存在且非空 / 文件可读 / 必填数组非空」，不满足视为漏配
- *   ③ 入口接线 —— cwd 的 package.json scripts.check 是否指向 run-checks（或等价）
+ *   ③ 入口接线 —— 优先读 docs/design-spec/config.json 的 runner.checkCommand；
+ *                  未配置时检查 cwd 的 package.json scripts.check 是否指向 run-checks（或等价）
  *   ④ 版本 pin —— submodule 接入看 gitlink（不需 version 文件）；复制式接入才对比 .design-spec-kit.version
  *   ⑤ DoD 对账 —— cwd 的 CLAUDE.md 是否提到每个已装 guard 文件名
  *
@@ -197,9 +198,15 @@ async function checkConfigProbes() {
 
 // ─── ③ 入口接线（WARN）───────────────────────────────────────
 async function checkEntryWiring() {
+  const runner = PROJECT_CONFIG.runner || {};
+  const checkCommand = runner.checkCommand || runner.check;
+  if (typeof checkCommand === 'string' && checkCommand.trim()) {
+    return `  ✓ runner.checkCommand = ${checkCommand.trim()}（${PROJECT_CONFIG_PATH}）`;
+  }
+
   const pkgSrc = await readIfExists(path.join(PROJECT_ROOT, 'package.json'));
   if (!pkgSrc) {
-    warn(`cwd 下没有 package.json —— 查不到入口接线，若项目走非 npm runner（make / bun 等）请按 IMPL-PROFILE 自行确认已接 run-checks 等价命令`);
+    warn(`cwd 下没有 package.json，且 ${PROJECT_CONFIG_PATH} 未配置 runner.checkCommand —— 查不到入口接线，若项目走非 npm runner（make / bun 等）请在 config.runner.checkCommand 登记等价命令`);
     return '  ? 无 package.json，跳过';
   }
   let pkg;
