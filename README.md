@@ -118,7 +118,7 @@ node tools/run-checks.js
 node tools/build-bundle.js --check
 ```
 
-`run-checks.js` 会按启用层 / extension（`docs/design-spec/config.json` 的 `kit.layers`，缺省 `['base']`）跑 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。Extension 只有被 `kit.layers` 点名时才会发现；已知 extension 目录缺失会给 setup 提示，未知名字由 `kit-doctor` 判为拼写错误。
+`run-checks.js` 会按启用层 / extension（`docs/design-spec/config.json` 的 `kit.layers`，缺省 `['base']`）跑 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。Extension 只有被 `kit.layers` 点名时才会发现；已知 extension 目录缺失时普通模式给 setup 提示，`--strict` 下失败；未知名字由 `kit-doctor` 判为拼写错误。
 
 ## CI 与 Commit Gate
 

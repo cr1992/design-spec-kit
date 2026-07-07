@@ -51,7 +51,7 @@ void expectDarkGlassSurface(
 }) {
   final color = _surfaceColor(anchor);
   expect(color, isNotNull, reason: 'No BoxDecoration color found under $anchor');
-  expect(color!.opacity, greaterThanOrEqualTo(minOpacity));
+  expect(color!.a, greaterThanOrEqualTo(minOpacity));
   expect(color.computeLuminance(), lessThanOrEqualTo(maxLuminance));
   expectBackdropFilterPresent(anchor);
 }
@@ -105,9 +105,11 @@ String _surfaceSignature(String anchor) {
   final color = _surfaceColor(anchor);
   if (color == null) return 'missing';
   return [
-    color.alpha,
-    color.red,
-    color.green,
-    color.blue,
+    _componentSignature(color.a),
+    _componentSignature(color.r),
+    _componentSignature(color.g),
+    _componentSignature(color.b),
   ].join(':');
 }
+
+String _componentSignature(double value) => value.toStringAsFixed(4);

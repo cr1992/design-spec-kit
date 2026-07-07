@@ -21,7 +21,7 @@
  * 怎么跑：
  *   node tools/run-checks.js              串跑启用层 guard
  *   node tools/run-checks.js --list       只列将跑/跳过/缺失，不执行
- *   node tools/run-checks.js --strict     未知 layer / extension 名也作为失败
+ *   node tools/run-checks.js --strict     未知 layer / extension 名、已启用但未安装的 extension 作为失败
  *   node tools/run-checks.js --execute-impl  透传给 extension guard
  *   node tools/run-checks.js --only check-tokens   只跑一个（无视 core 层开关；带不带 .js 都行）
  *   node tools/run-checks.js --all        无视 core 层开关跑全部 tools/ guard
@@ -178,6 +178,7 @@ let checks = [...corePlan.run, ...extensionPlans.flatMap((p) => p.run)];
 const extensionMissingGuards = extensionPlans
   .filter((p) => p.status === 'present')
   .flatMap((p) => p.missing.map((file) => ({ extension: p.name, file })));
+const missingExtensionDirs = extensionPlans.filter((p) => p.status === 'missing-dir');
 
 if (presentCore.length === 0) {
   console.log(`✗ ${SELF_DIR} 下没找到任何 check-*.js —— 至少应装 guard①（check-tokens.js）`);
@@ -200,7 +201,8 @@ if (presentCore.length === 0) {
   }
 
   const unknownIsFail = flags.strict && UNKNOWN_LAYER_NAMES.length > 0;
-  const missingIsFail = corePlan.missing.length > 0 || extensionMissingGuards.length > 0;
+  const missingExtensionDirIsFail = flags.strict && missingExtensionDirs.length > 0;
+  const missingIsFail = corePlan.missing.length > 0 || extensionMissingGuards.length > 0 || missingExtensionDirIsFail;
 
   if (flags.list) {
     console.log(`启用层/扩展 [${enabledLabel()}]${flags.all ? '（--all 无视 core 层开关）' : ''} · 将跑 ${checks.length} 个 guard（tools：${SELF_DIR}）：`);
@@ -208,7 +210,10 @@ if (presentCore.length === 0) {
     for (const s of corePlan.skipped) console.log(`  · 跳过 ${s.file}（属未启用层 '${s.layer}'——启用在 docs/design-spec/config.json 配 kit.layers；无 config 的独立项目才改本文件 DEFAULT_INSTALLED_LAYERS）`);
     for (const plan of extensionPlans) {
       if (plan.status === 'missing-dir') {
-        console.log(`  · 跳过 extension '${plan.name}'（${plan.dir} 不存在；如需启用请安装该 extension，或从 kit.layers 移除 '${plan.name}'）`);
+        const mark = flags.strict ? '✗' : '·';
+        const label = flags.strict ? 'extension' : '跳过 extension';
+        const strictHint = flags.strict ? '；--strict 要求已启用 extension 必须已安装' : '';
+        console.log(`  ${mark} ${label} '${plan.name}'（${plan.dir} 不存在；如需启用请安装该 extension，或从 kit.layers 移除 '${plan.name}'${strictHint}）`);
       }
     }
     for (const m of corePlan.missing) console.log(`  ✗ 缺失 ${m}（启用层期望但文件不在——从 kit 拷入或关掉该层）`);
@@ -221,7 +226,10 @@ if (presentCore.length === 0) {
     for (const s of corePlan.skipped) console.log(`  · 跳过 ${s.file}（未启用层 '${s.layer}'）`);
     for (const plan of extensionPlans) {
       if (plan.status === 'missing-dir') {
-        console.log(`  · 跳过 extension '${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除）`);
+        const mark = flags.strict ? '✗' : '·';
+        const label = flags.strict ? 'extension' : '跳过 extension';
+        const strictHint = flags.strict ? '；--strict 要求已启用 extension 必须已安装' : '';
+        console.log(`  ${mark} ${label} '${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
       }
     }
     for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ⚠ 未知 layer / extension '${name}'（kit-doctor 会提示拼写；run-checks --strict 会失败）`);
@@ -252,6 +260,10 @@ if (presentCore.length === 0) {
       anyFail = true;
       console.log(`  ✗ ${m.extension}/${normalizeGuardName(m.file)}  缺失（extension 目录不完整）`);
     }
+    if (missingExtensionDirIsFail) {
+      anyFail = true;
+      for (const plan of missingExtensionDirs) console.log(`  ✗ ${plan.name}  已启用但 extension 目录不存在（${plan.dir}）`);
+    }
     if (unknownIsFail) {
       anyFail = true;
       for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ✗ ${name}  未知 layer / extension`);
@@ -269,11 +281,14 @@ if (presentCore.length === 0) {
   } else {
     for (const plan of extensionPlans) {
       if (plan.status === 'missing-dir') {
-        console.log(`  · 跳过 extension '${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除）`);
+        const mark = flags.strict ? '✗' : '·';
+        const label = flags.strict ? 'extension' : '跳过 extension';
+        const strictHint = flags.strict ? '；--strict 要求已启用 extension 必须已安装' : '';
+        console.log(`  ${mark} ${label} '${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
       }
     }
     for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ⚠ 未知 layer / extension '${name}'（kit-doctor 会提示拼写；run-checks --strict 会失败）`);
-    console.log(corePlan.missing.length || extensionMissingGuards.length || unknownIsFail ? 'RESULT: FAIL' : 'RESULT: PASS');
-    if (corePlan.missing.length || extensionMissingGuards.length || unknownIsFail) process.exitCode = 1;
+    console.log(corePlan.missing.length || extensionMissingGuards.length || missingExtensionDirIsFail || unknownIsFail ? 'RESULT: FAIL' : 'RESULT: PASS');
+    if (corePlan.missing.length || extensionMissingGuards.length || missingExtensionDirIsFail || unknownIsFail) process.exitCode = 1;
   }
 }
