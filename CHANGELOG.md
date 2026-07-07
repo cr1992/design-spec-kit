@@ -5,6 +5,9 @@
 
 ## Unreleased
 
+- [扩展] 新增实现栈 extension 机制：`tools/kit-registry.js` 维护 known extensions，`run-checks.js` 只发现 `kit.layers` 点名的 extension，`kit-doctor.js` 区分 core layer / known extension / unknown name。
+- [扩展] 新增 `extensions/flutter-visual/` v1：默认 config-only 校验 manifest contracts / interactions、anchor 映射、evidence 与 `--reporter expanded`；`--execute-impl` 才运行项目声明的 Flutter test command 并核对 test name。
+- [还原层] `screen-manifest.schema.json` 支持 `interactions` 与 `elements[].contracts`，`check-manifest.js` 增加 interaction anchor 校验，并把 interactions / contracts 纳入 source-vs-generated 漂移对账。
 - [还原层] `check-manifest` 支持可选 `sourceManifestDir` / `sourceManifestSuffix`：对设计侧语义源 manifest 与 generated 的 `version`、anchors、designed/delegated states 做双向漂移检查，防止生成物过期但 schema 仍 PASS。
 - [工程] `kit-doctor` 支持非 npm runner：业务仓可在 `docs/design-spec/config.json` 配 `runner.checkCommand`，doctor 优先识别该入口，不再把 Makefile / bun / 其他 runner 项目误报为入口接线 WARN。
 - [壳] kit 随包 ship canonical 壳骨架 `shells/mobile-shell/`(business-free 移动端,从 hirobot 原型 promote):通用运行时 + 中性 demo 屏 + 占位视觉 + 纯度 / 同源 guard。新增 `docs/SHELL-KIT.md` 划清 kit 层(通用运行时)vs 项目层(纯度 config 各自填)、两种接入方式、canonical / 拷贝收敛。`check-shell-purity.js` 三 knob(`MODULE_PREFIX_RE`/`FORBID_WORDS`/`MODULES_DIR`)中性化,hirobot 值转注释示例;纯度 + kit-drift guard 均 PASS。桌面等壳后续 `shells/<name>/` 平级加。

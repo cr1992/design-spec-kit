@@ -9,7 +9,8 @@
  * 版本 pin 缺失或落后、DoD 表没提到已装 guard。本脚本把这些「装了没适配」的
  * 情况一次体检出来。
  *
- *   ① guard 文件在位 —— 已装层期望的 check-*.js 是否都在 tools/（自身目录）
+ *   ① guard 文件在位 —— 已装 core 层期望的 check-*.js 是否都在 tools/（自身目录），
+ *                       已装 extension 是否存在自己的 guard 文件
  *   ② 配置命中探针 —— 仅对启用层 guard 生效；从源码抽取关键配置常量，对 cwd 验证
  *                      「目录存在且非空 / 文件可读 / 必填数组非空」，不满足视为漏配
  *   ③ 入口接线 —— 优先读 docs/design-spec/config.json 的 runner.checkCommand；
@@ -17,7 +18,8 @@
  *   ④ 版本 pin —— submodule 接入看 gitlink（不需 version 文件）；复制式接入才对比 .design-spec-kit.version
  *   ⑤ DoD 对账 —— cwd 的 CLAUDE.md 是否提到每个已装 guard 文件名
  *
- * FAIL 仅由 ①② 触发（guard 缺失 / 配置零命中 = 装了跟没装一样）；③④⑤ 只报 WARN。
+ * FAIL 由 ①② 和未知 layer / extension 触发（guard 缺失 / 配置零命中 = 装了跟没装一样）；
+ * ③④⑤ 只报 WARN。
  *
  * 两种模式：
  *   实例模式（默认）—— cwd = 被体检的实例项目根，跑全部 ①~⑤。
@@ -25,8 +27,8 @@
  *                   或显式 --source）。源仓没有「项目配置」可体检，只跑 ①（且期望全部层的 guard
  *                   都在位——源仓必须携带完整套件），②③④⑤ 跳过。
  *
- * 层配置单一真源：INSTALLED_LAYERS 在 run-checks.js 顶部（聚合入口按它决定跑什么），
- * 本脚本从 run-checks.js 源码读取，不另行配置——防两处配置漂移。
+ * 层 / extension 真源：业务仓 docs/design-spec/config.json 的 kit.layers 声明启用项；
+ * 已知 core layer 与 known extension 集合来自 tools/kit-registry.js，防两处配置漂移。
  *
  * 怎么跑：node tools/kit-doctor.js（从项目根）；kit 源仓自检：node tools/kit-doctor.js --source
  * ═════════════════════════════════════════════════════════════*/
@@ -34,17 +36,10 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { DEFAULT_INSTALLED_LAYERS as FALLBACK_LAYERS, KNOWN_EXTENSIONS, LAYER_GUARDS, isKnownExtension, isKnownLayer } from './kit-registry.js';
 
 // ─── 配置（一般无需改；层开关去 run-checks.js 顶部改）─────────────
 const args = [];   // 沙箱手改位（本文件 node-only，一般留空）
-
-// 各层期望的 guard 文件清单（新增层时在这里补一行；与 run-checks.js 的表保持一致）。
-const LAYER_GUARDS = {
-  base:    ['check-tokens.js', 'check-icons.js', 'check-changelog.js', 'check-orphan-css.js'],
-  i18n:    ['check-i18n.js'],
-  handoff: ['check-manifest.js', 'check-deviation.js'],
-};
-const FALLBACK_LAYERS = ['base'];   // run-checks.js 读不到时的兜底
 
 const EFFECTIVE_ARGS = args.length ? args : process.argv.slice(2);
 
@@ -85,7 +80,7 @@ function extractArrayConst(src, constName) {
   return items;
 }
 
-// ─── 模式识别 + 层配置读取（单一真源 = run-checks.js）──────────────
+// ─── 模式识别 + 层 / extension 配置读取 ────────────────────────
 const selfIsProjectTools = path.resolve(SELF_DIR) === path.resolve(PROJECT_ROOT, 'tools');
 const IS_SOURCE = EFFECTIVE_ARGS.includes('--source') ||
   (selfIsProjectTools && (await readIfExists(path.join(SELF_DIR, '..', 'CLAUDE.template.md'))) !== null);
@@ -113,9 +108,14 @@ async function readInstalledLayers() {
   }
   return { layers: FALLBACK_LAYERS, from: '兜底默认' };
 }
-// kit 源仓必须携带全部层；实例按 run-checks.js 的启用层。
-const layerInfo = IS_SOURCE ? { layers: Object.keys(LAYER_GUARDS), from: '源仓模式（全部层）' } : await readInstalledLayers();
-const INSTALLED_LAYERS = layerInfo.layers.filter(l => LAYER_GUARDS[l]);
+// kit 源仓必须携带全部 core 层与 known extension；实例按 config 的启用项。
+const layerInfo = IS_SOURCE
+  ? { layers: [...Object.keys(LAYER_GUARDS), ...Object.keys(KNOWN_EXTENSIONS)], from: '源仓模式（全部层 + known extension）' }
+  : await readInstalledLayers();
+const RAW_INSTALLED_LAYERS = layerInfo.layers;
+const UNKNOWN_LAYER_NAMES = RAW_INSTALLED_LAYERS.filter((name) => !isKnownLayer(name) && !isKnownExtension(name));
+const INSTALLED_LAYERS = RAW_INSTALLED_LAYERS.filter(isKnownLayer);
+const INSTALLED_EXTENSIONS = RAW_INSTALLED_LAYERS.filter(isKnownExtension);
 const ENABLED_GUARDS = new Set(INSTALLED_LAYERS.flatMap(l => LAYER_GUARDS[l] || []));
 const GUARD_LAYER = new Map(Object.entries(LAYER_GUARDS).flatMap(([layer, files]) => files.map(file => [file, layer])));
 
@@ -134,6 +134,32 @@ async function checkGuardsPresent() {
   if (missing.length > 0) {
     fail(`guard 文件缺失（已装层 [${INSTALLED_LAYERS.join(', ')}] 期望但 tools/ 里没有）：${missing.join(', ')}`);
   }
+
+  for (const name of INSTALLED_EXTENSIONS) {
+    const meta = KNOWN_EXTENSIONS[name];
+    const extDir = path.join(SELF_DIR, '..', meta.dir);
+    let entries = null;
+    try { entries = await readdir(extDir); } catch { /* missing dir */ }
+    if (entries === null) {
+      const message = `extension '${name}' 已在 kit.layers 启用，但目录 ${meta.dir} 不存在`;
+      if (IS_SOURCE) fail(`${message} —— 源仓 registry 已声明 known extension，源码必须携带实现`);
+      else warn(`${message} —— 如需启用请安装该 extension；否则从 kit.layers 移除 '${name}'`);
+      report.push(`  ${IS_SOURCE ? '✗' : '⚠'} ${name}/（${meta.dir} 不存在）`);
+      continue;
+    }
+    const extPresent = new Set(entries);
+    for (const guard of meta.guards) {
+      const ok = extPresent.has(guard);
+      report.push(`  ${ok ? '✓' : '✗'} ${name}/${guard}`);
+      if (!ok) fail(`extension guard 文件缺失：${meta.dir}/${guard}`);
+    }
+  }
+
+  for (const name of UNKNOWN_LAYER_NAMES) {
+    fail(`kit.layers 包含未知 layer / extension '${name}' —— 已知层：[${Object.keys(LAYER_GUARDS).join(', ')}]；已知 extension：[${Object.keys(KNOWN_EXTENSIONS).join(', ')}]`);
+    report.push(`  ✗ ${name}（未知 layer / extension，疑似拼写错误）`);
+  }
+
   return report;
 }
 
@@ -152,6 +178,11 @@ const PROBES = [
 function guardConfig(guardFile) {
   const name = guardFile.replace(/\.js$/, '');
   return PROJECT_CONFIG.guards?.[name] || PROJECT_CONFIG.guards?.[guardFile] || {};
+}
+
+function isKnownCheckCommand(command) {
+  return /\brun-checks(?:\.js)?\b/.test(command) ||
+    /\bdesign-spec-check\b/.test(command);
 }
 
 async function checkConfigProbes() {
@@ -201,7 +232,12 @@ async function checkEntryWiring() {
   const runner = PROJECT_CONFIG.runner || {};
   const checkCommand = runner.checkCommand || runner.check;
   if (typeof checkCommand === 'string' && checkCommand.trim()) {
-    return `  ✓ runner.checkCommand = ${checkCommand.trim()}（${PROJECT_CONFIG_PATH}）`;
+    const command = checkCommand.trim();
+    if (isKnownCheckCommand(command)) {
+      return `  ✓ runner.checkCommand = ${command}（${PROJECT_CONFIG_PATH}）`;
+    }
+    warn(`${PROJECT_CONFIG_PATH} 的 runner.checkCommand="${command}" 未识别为 run-checks.js 或已知等价入口（如 make design-spec-check）——请确认它会跑全部已启用 guard`);
+    return `  ⚠ runner.checkCommand = ${command}（未识别等价入口）`;
   }
 
   const pkgSrc = await readIfExists(path.join(PROJECT_ROOT, 'package.json'));
@@ -277,9 +313,9 @@ async function checkDodMention(installedGuardFiles) {
 
 // ─── Main ────────────────────────────────────────────────────
 
-console.log(`kit-doctor 体检：${IS_SOURCE ? 'kit 源仓模式' : '实例模式'} · 项目根=${PROJECT_ROOT}  已装层=[${INSTALLED_LAYERS.join(', ')}]（来源：${layerInfo.from}）\n`);
+console.log(`kit-doctor 体检：${IS_SOURCE ? 'kit 源仓模式' : '实例模式'} · 项目根=${PROJECT_ROOT}  已启用项=[${RAW_INSTALLED_LAYERS.join(', ')}]（来源：${layerInfo.from}）\n`);
 
-console.log('① guard 文件在位' + (IS_SOURCE ? '（源仓须携带全部层）' : ''));
+console.log('① guard 文件在位' + (IS_SOURCE ? '（源仓须携带全部层 + known extension）' : ''));
 for (const line of await checkGuardsPresent()) console.log(line);
 
 if (IS_SOURCE) {
@@ -295,7 +331,10 @@ if (IS_SOURCE) {
   console.log(await checkVersionPin());
 
   console.log('\n⑤ DoD 对账');
-  const expectedGuardFiles = [...new Set(INSTALLED_LAYERS.flatMap(l => LAYER_GUARDS[l] || []))];
+  const expectedGuardFiles = [...new Set([
+    ...INSTALLED_LAYERS.flatMap(l => LAYER_GUARDS[l] || []),
+    ...INSTALLED_EXTENSIONS.flatMap((name) => KNOWN_EXTENSIONS[name]?.guards || []),
+  ])];
   console.log(await checkDodMention(expectedGuardFiles));
 }
 
@@ -309,6 +348,7 @@ if (findings.fail.length > 0) {
   for (const f of findings.fail) console.log(`  - ${f}`);
   console.log(`\n修法：`);
   console.log(`  · guard 文件缺失 → 从 kit 仓 tools/ 重新拷入缺失文件`);
+  console.log(`  · extension 缺失 → 安装对应 extensions/<name>/，或从 docs/design-spec/config.json 的 kit.layers 移除该 extension`);
   console.log(`  · 配置零命中 → 打开对应 guard 顶部「配置」区，把扫描目录/词典路径/registry 改成本项目真实路径`);
   console.log('\nRESULT: FAIL');
   process.exitCode = 1;

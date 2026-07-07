@@ -39,6 +39,7 @@ const ROOT_FILES = [
 // 目录扫描规则：进这些目录，按扩展名过滤，排除子路径含 _archive 的文件。
 const DIR_RULES = [
   { dir: 'docs',  exts: ['.md', '.json'] },
+  { dir: 'extensions', exts: ['.js', '.md', '.dart'] },
   { dir: 'tools', exts: ['.js'] },
 ];
 

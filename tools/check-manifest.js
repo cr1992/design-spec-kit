@@ -23,11 +23,12 @@ if (typeof readFile !== 'function') {
  *   ③ 语义规则（schema 管不到 / 双保险）：
  *        · states.designed + states.delegated 合计非空（设计可少画，不可不表态）→ FAIL
  *        · elements[].anchor 单份文件内唯一（对账主键不许撞）        → FAIL
+ *        · interactions[].trigger / target 必须引用已有 anchor          → FAIL
  *        · state_classes.exempt 每条带 note（schema 已管，此处双保险）  → FAIL
  *        · states.delegated[].contract_ref === 'TBD'                 → WARN（显式待裁决信号，不 FAIL）
  *   ④ SCREENS_LIST_PATH 配置时：清单里每个 screen-id 必须有对应 manifest → FAIL（覆盖率对账）
  *   ⑤ SOURCE_MANIFEST_DIR 配置时：设计侧语义源 manifest 与 generated 的 version / anchor /
- *      designed state / delegated state 双向一致 → FAIL（防生成物过期但 schema 仍 PASS）
+ *      designed state / delegated state / interactions / contracts 双向一致 → FAIL（防生成物过期但 schema 仍 PASS）
  *
  * 怎么跑：AI 沙箱 = read_file 本文件整段粘进 run_script（helper readFile/ls/log）；node/CI = node tools/check-manifest.js。
  *   末行 `RESULT: PASS|FAIL`；FAIL 时 node 置退出码 1，带「修法」提示。配置见下方「配置」区（★必改已标）。
@@ -156,6 +157,20 @@ function semanticChecks(manifest, fileErrs, fileWarns) {
     if (n > 1) fileErrs.push(`elements[].anchor "${a}" 重复 ${n} 次（对账主键须唯一）`);
   }
 
+  // interaction trigger / target 必须引用已有 anchor
+  const anchors = new Set([...seen.keys()]);
+  const interactions = Array.isArray(manifest && manifest.interactions) ? manifest.interactions : [];
+  interactions.forEach((interaction, i) => {
+    const trigger = interaction && interaction.trigger;
+    const target = interaction && interaction.target;
+    if (typeof trigger === 'string' && !anchors.has(trigger)) {
+      fileErrs.push(`interactions[${i}].trigger="${trigger}" 未引用任何 elements[].anchor`);
+    }
+    if (typeof target === 'string' && !anchors.has(target)) {
+      fileErrs.push(`interactions[${i}].target="${target}" 未引用任何 elements[].anchor`);
+    }
+  });
+
   // state_classes.exempt 每条带 note（schema 已管，双保险）
   const exempt = (manifest && manifest.state_classes && manifest.state_classes.exempt) || [];
   if (Array.isArray(exempt)) exempt.forEach((e, i) => {
@@ -188,6 +203,28 @@ function delegatedKey(d) {
   ].join('|');
 }
 
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function interactionKey(interaction) {
+  if (!interaction || typeof interaction !== 'object') return '';
+  return [
+    interaction.trigger || '',
+    interaction.action || '',
+    interaction.target || '',
+  ].join('|');
+}
+
+function contractKey(element) {
+  if (!element || typeof element !== 'object' || !element.contracts) return '';
+  return `${element.anchor || ''}|${stableJson(element.contracts)}`;
+}
+
 function diffSet(label, sourceValues, generatedValues, fileErrs) {
   const source = sortedUnique(sourceValues);
   const generated = sortedUnique(generatedValues);
@@ -212,6 +249,21 @@ function sourceDriftChecks(sourceManifest, generatedManifest, fileErrs) {
     'anchors',
     sourceElements.map((el) => el && el.anchor),
     generatedElements.map((el) => el && el.anchor),
+    fileErrs,
+  );
+  diffSet(
+    'contracts',
+    sourceElements.map(contractKey),
+    generatedElements.map(contractKey),
+    fileErrs,
+  );
+
+  const sourceInteractions = Array.isArray(sourceManifest.interactions) ? sourceManifest.interactions : [];
+  const generatedInteractions = Array.isArray(generatedManifest.interactions) ? generatedManifest.interactions : [];
+  diffSet(
+    'interactions',
+    sourceInteractions.map(interactionKey),
+    generatedInteractions.map(interactionKey),
     fileErrs,
   );
 

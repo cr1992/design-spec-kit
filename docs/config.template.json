@@ -6,7 +6,12 @@
     "layers": [
       "base"
     ],
-    "notes": "业务仓在这里配置已启用层；submodule 内源码保持只读。可选层：i18n、handoff。"
+    "notes": "业务仓在这里配置已启用层 / extension；submodule 内源码保持只读。可选层：i18n、handoff。可选 extension：flutter-visual。"
+  },
+  "extensions": {
+    "flutter-visual": {
+      "screens": []
+    }
   },
   "guards": {
     "check-tokens": {

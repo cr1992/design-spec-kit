@@ -77,6 +77,7 @@ design-spec-kit/
    - `["base"]`：默认底座。
    - 加 `"i18n"`：启用国际化检查。
    - 加 `"handoff"`：启用 manifest 与偏离台账检查。
+   - 加 `"flutter-visual"`：启用 Flutter 实现栈扩展；需同时保留 `extensions/flutter-visual/`，并配置 `extensions.flutter-visual.screens[]`。
 5. 按项目实际目录修改各 guard 顶部的配置区。
 6. 跑 `node tools/kit-doctor.js`，确认入口、层配置和 guard 文件都对上。
 
@@ -117,7 +118,7 @@ node tools/run-checks.js
 node tools/build-bundle.js --check
 ```
 
-`run-checks.js` 会按启用层（`docs/design-spec/config.json` 的 `kit.layers`，缺省 `['base']`）跑 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。
+`run-checks.js` 会按启用层 / extension（`docs/design-spec/config.json` 的 `kit.layers`，缺省 `['base']`）跑 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。Extension 只有被 `kit.layers` 点名时才会发现；已知 extension 目录缺失会给 setup 提示，未知名字由 `kit-doctor` 判为拼写错误。
 
 ## CI 与 Commit Gate
 
@@ -142,12 +143,13 @@ npm run hooks:install
 | 5 `check-i18n` | 检查运行时挂载、硬编码文案和死键 | 有 |
 | 6 `check-manifest` | 检查生成的 screen manifest 是否过 schema 且语义完整 | 无 |
 | 7 `check-deviation` | 检查代码偏离标记、偏离台账和 manifest 引用是否一致 | 无 |
+| ext `flutter-visual` | Flutter 实现栈视觉契约配置与 evidence 核对 | 无 |
 
 ## 还原交接
 
 启用还原交接层后，每个实现栈需要填一份 `IMPL-PROFILE`，每个屏幕需要生成一份 `*.manifest.generated.json`。guard 只认生成物，不认手写草稿。
 
-如果项目同时保留设计侧语义源 manifest，可在 `check-manifest` 配置 `sourceManifestDir`。启用后 guard 会检查源 manifest 与 generated 的 `version`、`elements[].anchor`、`states.designed` 和 `states.delegated` 是否一致，防止生成物落后但 schema 仍 PASS。
+如果项目同时保留设计侧语义源 manifest，可在 `check-manifest` 配置 `sourceManifestDir`。启用后 guard 会检查源 manifest 与 generated 的 `version`、`elements[].anchor`、`states.designed`、`states.delegated`、`interactions` 和 `elements[].contracts` 是否一致，防止生成物落后但 schema 仍 PASS。
 
 偏离设计的实现必须登记到 `DEVIATION-LEDGER`。标准状态类（loading、error、empty、offline 等）不算偏离，但必须在 manifest 的状态空间里覆盖。
 
