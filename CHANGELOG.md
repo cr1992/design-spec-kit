@@ -3,8 +3,11 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
-## Unreleased
+## v2.1.0 — 2026-07-08
 
+- [文档] `extensions/flutter-visual/README.md` 补 config-only 显式警示：默认模式 PASS ≠ evidence 已执行，接入方必须给 `--execute-impl` 安排本地 DoD 或带 Flutter 的 CI 执行位。
+- [文档] `ADOPTION.md`：CI/commit gate 接线升级为落地必做步骤（含报告制→转硬节奏）；补 submodule 消费仓 CI 两坑（`.gitmodules` 相对 URL、GitLab job token 允许列表，来自 sproboagent 实测）；baseline 补处置声明约定（冻结不清 / 排队清偿 + owner，防退化成永久豁免池）；submodule 接入树移除 `.design-spec-kit.version` 残留（与 VERSIONING 单源规则对齐），GitLab CI 示例改用 `GIT_SUBMODULE_*` 变量 + gitlink 触发路径。
+- [文档] `VERSIONING.md` 补发版纪律：bump 与打 tag 同动作，消费仓 pin 必须落 tag、不落中间 commit。
 - [扩展] 新增实现栈 extension 机制：`tools/kit-registry.js` 维护 known extensions，`run-checks.js` 只发现 `kit.layers` 点名的 extension，`kit-doctor.js` 区分 core layer / known extension / unknown name；已启用 extension 目录缺失时普通模式给 setup 提示，`--strict` 失败。
 - [扩展] 新增 `extensions/flutter-visual/` v1：默认 config-only 校验 manifest contracts / interactions、anchor 映射、evidence 与 `--reporter expanded`；`--execute-impl` 才运行项目声明的 Flutter test command 并核对 test name；helper 模板使用 Flutter 新版 Color component API。
 - [还原层] `screen-manifest.schema.json` 支持 `interactions` 与 `elements[].contracts`，`check-manifest.js` 增加 interaction anchor 校验，并把 interactions / contracts 纳入 source-vs-generated 漂移对账。

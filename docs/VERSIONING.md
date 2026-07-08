@@ -4,6 +4,7 @@
 
 ## 角色
 - **kit 仓（权威源）**：本套件的 git 仓库，语义化版本 tag（`v2.0.0` 起）。`package.json` 的 `version` 字段 = 当前版本唯一真源。
+- **发版纪律**：`package.json` bump 与打 tag 是同一动作的两半——bump 合入后立即打对应 tag，不允许「version 已 bump、tag 未打」长期存在。消费仓的 pin **必须落在 tag 上**，不落两个 tag 之间的中间 commit；中间 commit 的 pin 无法用版本号沟通、回滚也没有锚点。急用未发版的修复时，先在 kit 仓补一个 patch tag 再 bump 消费仓。
 - **实例**：使用方项目里那份 kit（契约 + docs + tools）。版本 pin 有两种，**按接入方式二选一，不要并存**：
   - **submodule 接入**（推荐）：版本 pin 就是 submodule 的 gitlink（精确到 commit）。`git submodule status` 即给版本，**不要**再建 `.design-spec-kit.version`——那会是会漂的第二真源。`kit-doctor` 检测到 kit 目录受 git 管即走此路。
   - **复制式接入 / 无 git 环境**：纯拷文件或 bundle 拆包，没有 gitlink，才在实例根写一个 **`.design-spec-kit.version`** 文件（一行 = 拷入的 kit 版本号）；`kit-doctor` 读它对比 kit 版本报「落后 N 版」。

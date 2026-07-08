@@ -57,6 +57,8 @@ node tools/run-checks.js
 - evidence 存在时，screen 声明了 command
 - command 包含 `--reporter expanded`
 
+> **默认模式的 PASS 不等于视觉契约已兑现。** config-only 只保证配置与 manifest 自洽，evidence 从未在 Flutter 里执行过。接入方必须给 `--execute-impl` 安排一个真实执行位：本地 DoD 自检清单，或带 Flutter 环境的 CI job。只跑默认模式的项目，「实现是否兑现契约」这一环是空转的；汇总输出里的 `config-only` 字样就是这个提醒。
+
 实现核对模式：
 
 ```bash
