@@ -129,6 +129,32 @@ const MODULE_PLANS = MODULES_CONFIG && Object.keys(MODULES_CONFIG).length > 0
       layers: Array.isArray(mod?.layers) && mod.layers.length > 0 ? mod.layers : layerInfo.layers,
     }))
   : [{ name: null, layers: layerInfo.layers }];
+
+// ── customGuards 形态校验（MULTI-MODULE-PROPOSAL 方案 2）───────────────
+// 只校验形态与引用；command 是仓内受信任代码，doctor 不宣称防注入。
+if (!IS_SOURCE && PROJECT_CONFIG.customGuards !== undefined) {
+  const raw = PROJECT_CONFIG.customGuards;
+  if (!Array.isArray(raw)) {
+    fail(`customGuards 必须是数组（${PROJECT_CONFIG_PATH}）`);
+  } else {
+    const seen = new Set();
+    const builtinNames = new Set(Object.values(LAYER_GUARDS).flat().map((f) => f.replace(/\.js$/, '')));
+    for (const [i, g] of raw.entries()) {
+      if (!g || typeof g !== 'object' || typeof g.name !== 'string' || !g.name.trim() || typeof g.command !== 'string' || !g.command.trim()) {
+        fail(`customGuards[${i}] 缺少非空 name / command（${PROJECT_CONFIG_PATH}）`); continue;
+      }
+      if (seen.has(g.name)) fail(`customGuards name 重复：'${g.name}'`);
+      seen.add(g.name);
+      if (builtinNames.has(g.name)) fail(`customGuards['${g.name}'] 与内置 guard 同名 —— 换一个 name（内置：${[...builtinNames].join(', ')}）`);
+      if (g.module && (!MODULES_CONFIG || !Object.prototype.hasOwnProperty.call(MODULES_CONFIG, g.module))) {
+        fail(`customGuards['${g.name}'].module='${g.module}' 未在 modules 分节声明`);
+      }
+      if (MODULES_CONFIG && Object.keys(MODULES_CONFIG).length > 0 && !g.module) {
+        fail(`customGuards['${g.name}'] 缺少 module —— modules 分节存在时每个 custom guard 必须归属一个已声明模块（输出两态契约，禁止第三态裸名）`);
+      }
+    }
+  }
+}
 const RAW_INSTALLED_LAYERS = [...new Set(MODULE_PLANS.flatMap((m) => m.layers))];
 const UNKNOWN_LAYER_NAMES = RAW_INSTALLED_LAYERS.filter((name) => !isKnownLayer(name) && !isKnownExtension(name));
 const INSTALLED_LAYERS = RAW_INSTALLED_LAYERS.filter(isKnownLayer);

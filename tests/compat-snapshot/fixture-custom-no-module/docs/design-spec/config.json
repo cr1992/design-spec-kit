@@ -1,0 +1,9 @@
+{
+  "kit": { "layers": ["base"] },
+  "modules": {
+    "mobile-app": { "guards": {} }
+  },
+  "customGuards": [
+    { "name": "project-orphan", "command": "echo hi" }
+  ]
+}

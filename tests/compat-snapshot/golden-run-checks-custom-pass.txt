@@ -1,0 +1,10 @@
+聚合入口：启用层/扩展 [base] · 串跑 1 个 guard
+
+── project-echo ──────────────────────────────
+[project-echo] project-echo: scanned 3 files, 0 violations
+[project-echo] RESULT: PASS
+
+════════ 汇总 ════════
+  ✓ project-echo  exit=0  RESULT: PASS
+
+RESULT: PASS

@@ -2,13 +2,10 @@
 /**
  * 兼容 snapshot 对拍（MULTI-MODULE-PROPOSAL 成功标准 1 与 2）
  * ------------------------------------------------------------
- * 三个冻结的消费仓 fixture 场景，run-checks 输出与 golden 逐字节比对（绝对路径
- * 归一化为 <node>/<kit> 占位）+ exit code 断言 + fixture 防改写检查：
- *
- *   1. fixture/           v2.1 单模块 config（无 modules 分节）——旧行为零漂移
- *   2. fixture-modules/   双模块 profile（模块 layers 子集 / 前缀输出 / 分账 baseline / 公共缺省继承）
- *   3. fixture-migration/ baseline 迁移防线——模块 baseline 缺失且旧全局 baseline 仍在 → 必须 FAIL，
- *                         禁静默重建空债 baseline
+ * 一组冻结的消费仓 fixture 场景（见下方 SCENARIOS 表，正向 + 负向），run-checks 输出
+ * 与 golden 逐字节比对（绝对路径归一化为 <node>/<kit> 占位）+ exit code 断言 + fixture
+ * 防改写检查。覆盖面：v2.1 单模块零漂移、多模块 profile、baseline 迁移防线、--only
+ * fail closed、空 modules、customGuards 判定契约。
  *
  * 用法：
  *   node tests/compat-snapshot/run.js            比对（CI 用）
@@ -33,6 +30,11 @@ const SCENARIOS = [
   { name: 'baseline 迁移防线（负向）', dir: 'fixture-migration', args: ['--only', 'check-tokens'], expectExit: 1, golden: 'golden-run-checks-migration.txt' },
   { name: '--only 未知模块 fail closed（负向）', dir: 'fixture-modules', args: ['--only', 'nope/check-tokens'], expectExit: 1, golden: 'golden-run-checks-only-unknown-module.txt' },
   { name: '空 modules 分节（负向）', dir: 'fixture-modules-empty', args: [], expectExit: 1, golden: 'golden-run-checks-modules-empty.txt' },
+  { name: 'customGuards 正向（RESULT: PASS）', dir: 'fixture-custom-guards', args: ['--only', 'project-echo'], expectExit: 0, golden: 'golden-run-checks-custom-pass.txt' },
+  { name: 'customGuards 否决语义（exit 0 + RESULT: FAIL，负向）', dir: 'fixture-custom-guards', args: ['--only', 'project-veto'], expectExit: 1, golden: 'golden-run-checks-custom-veto.txt' },
+  { name: 'customGuards 不可翻案（exit 非零 + RESULT: PASS，负向）', dir: 'fixture-custom-guards', args: ['--only', 'project-liar'], expectExit: 1, golden: 'golden-run-checks-custom-liar.txt' },
+  { name: 'customGuards 无 RESULT 行按退出码（正向）', dir: 'fixture-custom-guards', args: ['--only', 'project-noresult'], expectExit: 0, golden: 'golden-run-checks-custom-noresult.txt' },
+  { name: 'customGuards 缺 module 两态契约（负向）', dir: 'fixture-custom-no-module', args: [], expectExit: 1, golden: 'golden-run-checks-custom-no-module.txt' },
 ];
 
 function fixturesDirty() {

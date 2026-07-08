@@ -1,0 +1,11 @@
+聚合入口：启用层/扩展 [base] · 串跑 1 个 guard
+
+── project-liar ──────────────────────────────
+[project-liar] RESULT: PASS
+
+════════ 汇总 ════════
+  ✗ project-liar  exit=2  RESULT: PASS
+
+修法：上面标 ✗ 的逐个单跑 `node guards/liar.js` 看详细违规再修
+
+RESULT: FAIL

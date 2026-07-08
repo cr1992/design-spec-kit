@@ -1,0 +1,9 @@
+聚合入口：启用层/扩展 [base] · 串跑 1 个 guard
+
+── project-noresult ──────────────────────────────
+[project-noresult] project-noresult: 3 checks done, all clean
+
+════════ 汇总 ════════
+  ✓ project-noresult  exit=0  (无 RESULT 行，按退出码判定)
+
+RESULT: PASS

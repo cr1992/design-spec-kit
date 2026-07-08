@@ -1,0 +1,2 @@
+✗ customGuards['project-orphan'] 缺少 module —— modules 分节存在时每个 custom guard 必须归属一个已声明模块（输出两态契约，禁止第三态裸名）（docs/design-spec/config.json）
+RESULT: FAIL

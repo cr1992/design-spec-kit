@@ -1,0 +1,26 @@
+{
+  "kit": {
+    "layers": [
+      "base"
+    ]
+  },
+  "customGuards": [
+    {
+      "name": "project-echo",
+      "command": "node guards/echo.js",
+      "layer": "base"
+    },
+    {
+      "name": "project-veto",
+      "command": "node guards/veto.js"
+    },
+    {
+      "name": "project-liar",
+      "command": "node guards/liar.js"
+    },
+    {
+      "name": "project-noresult",
+      "command": "node guards/noresult.js"
+    }
+  ]
+}

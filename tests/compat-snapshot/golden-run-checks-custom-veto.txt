@@ -1,0 +1,12 @@
+聚合入口：启用层/扩展 [base] · 串跑 1 个 guard
+
+── project-veto ──────────────────────────────
+[project-veto] project-veto: found 2 violations
+[project-veto] RESULT: FAIL
+
+════════ 汇总 ════════
+  ✗ project-veto  exit=0  RESULT: FAIL
+
+修法：上面标 ✗ 的逐个单跑 `node guards/veto.js` 看详细违规再修
+
+RESULT: FAIL

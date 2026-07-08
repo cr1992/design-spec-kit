@@ -4904,6 +4904,32 @@ const MODULE_PLANS = MODULES_CONFIG && Object.keys(MODULES_CONFIG).length > 0
       layers: Array.isArray(mod?.layers) && mod.layers.length > 0 ? mod.layers : layerInfo.layers,
     }))
   : [{ name: null, layers: layerInfo.layers }];
+
+// ── customGuards 形态校验（MULTI-MODULE-PROPOSAL 方案 2）───────────────
+// 只校验形态与引用；command 是仓内受信任代码，doctor 不宣称防注入。
+if (!IS_SOURCE && PROJECT_CONFIG.customGuards !== undefined) {
+  const raw = PROJECT_CONFIG.customGuards;
+  if (!Array.isArray(raw)) {
+    fail(`customGuards 必须是数组（${PROJECT_CONFIG_PATH}）`);
+  } else {
+    const seen = new Set();
+    const builtinNames = new Set(Object.values(LAYER_GUARDS).flat().map((f) => f.replace(/\.js$/, '')));
+    for (const [i, g] of raw.entries()) {
+      if (!g || typeof g !== 'object' || typeof g.name !== 'string' || !g.name.trim() || typeof g.command !== 'string' || !g.command.trim()) {
+        fail(`customGuards[${i}] 缺少非空 name / command（${PROJECT_CONFIG_PATH}）`); continue;
+      }
+      if (seen.has(g.name)) fail(`customGuards name 重复：'${g.name}'`);
+      seen.add(g.name);
+      if (builtinNames.has(g.name)) fail(`customGuards['${g.name}'] 与内置 guard 同名 —— 换一个 name（内置：${[...builtinNames].join(', ')}）`);
+      if (g.module && (!MODULES_CONFIG || !Object.prototype.hasOwnProperty.call(MODULES_CONFIG, g.module))) {
+        fail(`customGuards['${g.name}'].module='${g.module}' 未在 modules 分节声明`);
+      }
+      if (MODULES_CONFIG && Object.keys(MODULES_CONFIG).length > 0 && !g.module) {
+        fail(`customGuards['${g.name}'] 缺少 module —— modules 分节存在时每个 custom guard 必须归属一个已声明模块（输出两态契约，禁止第三态裸名）`);
+      }
+    }
+  }
+}
 const RAW_INSTALLED_LAYERS = [...new Set(MODULE_PLANS.flatMap((m) => m.layers))];
 const UNKNOWN_LAYER_NAMES = RAW_INSTALLED_LAYERS.filter((name) => !isKnownLayer(name) && !isKnownExtension(name));
 const INSTALLED_LAYERS = RAW_INSTALLED_LAYERS.filter(isKnownLayer);
@@ -5256,6 +5282,48 @@ const MODULE_PLANS = MODULES_CONFIG
     }))
   : [{ name: null, layers: INSTALLED_LAYERS }];
 
+// ─── 自定义 guard 登记（MULTI-MODULE-PROPOSAL 方案 2）────────────────
+// 判定契约（保守合取）：exit != 0 永远 FAIL；exit == 0 且末个 `RESULT:` 行为 FAIL → FAIL；
+// 无 RESULT 行按 exit code。信任边界：command 是仓内受版本控制的受信任代码，runner 原样
+// 执行——customGuards 不是安全边界，doctor 只校验形态不防注入。
+const CUSTOM_GUARDS_RAW = PROJECT_CONFIG.customGuards;
+const CUSTOM_GUARDS = [];
+{
+  const errors = [];
+  if (CUSTOM_GUARDS_RAW !== undefined && !Array.isArray(CUSTOM_GUARDS_RAW)) {
+    errors.push('customGuards 必须是数组');
+  } else if (Array.isArray(CUSTOM_GUARDS_RAW)) {
+    const seen = new Set();
+    for (const [i, g] of CUSTOM_GUARDS_RAW.entries()) {
+      if (!g || typeof g !== 'object' || typeof g.name !== 'string' || !g.name.trim() || typeof g.command !== 'string' || !g.command.trim()) {
+        errors.push(`customGuards[${i}] 缺少非空 name / command`); continue;
+      }
+      if (seen.has(g.name)) { errors.push(`customGuards name 重复：'${g.name}'`); continue; }
+      seen.add(g.name);
+      const builtinNames = new Set(Object.values(LAYER_GUARDS).flat().map((f) => f.replace(/\.js$/, '')));
+      if (builtinNames.has(g.name)) { errors.push(`customGuards['${g.name}'] 与内置 guard 同名 —— 换一个 name`); continue; }
+      if (g.module && (!MODULES_CONFIG || !Object.prototype.hasOwnProperty.call(MODULES_CONFIG, g.module))) {
+        errors.push(`customGuards['${g.name}'].module='${g.module}' 未在 modules 分节声明`); continue;
+      }
+      // 输出两态契约（proposal 方案 1）：modules 分节存在时所有输出一律带 <module>/ 前缀——
+      // 无 module 的 custom guard 会偷渡出第三态裸名输出，fail closed。
+      if (MODULES_CONFIG && !g.module) {
+        errors.push(`customGuards['${g.name}'] 缺少 module —— modules 分节存在时每个 custom guard 必须归属一个已声明模块（输出两态契约，禁止第三态裸名）`); continue;
+      }
+      CUSTOM_GUARDS.push({
+        kind: 'custom', name: g.name, command: g.command,
+        module: g.module || null, layer: g.layer || null,
+        file: g.name, label: `${g.module ? `${g.module}/` : ''}${g.name}`,
+      });
+    }
+  }
+  if (errors.length > 0) {
+    for (const e of errors) console.log(`✗ ${e}（docs/design-spec/config.json）`);
+    console.log('RESULT: FAIL');
+    process.exit(1);
+  }
+}
+
 const layerSplit = (layers) => ({
   core: layers.filter(isKnownLayer),
   extensions: layers.filter(isKnownExtension),
@@ -5370,14 +5438,13 @@ function matchesOnly(check, want) {
 // （SCAN_ROOTS 等）都是相对项目 cwd 写的。
 function runOne(check, flags) {
   return new Promise(resolve => {
-    const passArgs = check.kind === 'extension' && flags.executeImpl ? ['--execute-impl'] : [];
     // 模块上下文经环境变量传给 guard（guard 内以 modules.<m>.guards.<g> ⊕ 顶层 guards.<g> 合成 effective config）
     const env = check.module ? { ...process.env, DESIGN_SPEC_KIT_MODULE: check.module } : process.env;
-    const child = spawn(process.execPath, [check.absPath, ...passArgs], {
-      cwd: process.cwd(),
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env,
-    });
+    const common = { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'], env };
+    // custom guard：原样执行登记的 command（仓内受信任代码，非安全边界）
+    const child = check.kind === 'custom'
+      ? spawn(check.command, { ...common, shell: true })
+      : spawn(process.execPath, [check.absPath, ...(check.kind === 'extension' && flags.executeImpl ? ['--execute-impl'] : [])], common);
     let out = '';
     child.stdout.on('data', d => { out += d.toString(); });
     child.stderr.on('data', d => { out += d.toString(); });
@@ -5416,7 +5483,21 @@ for (const mp of MODULE_PLANS) {
   resolvedModules.push({ name: mp.name, layers: mp.layers, corePlan, extensionPlans });
 }
 
-let checks = resolvedModules.flatMap((m) => [...m.corePlan.run, ...m.extensionPlans.flatMap((p) => p.run)]);
+let checks = [...resolvedModules.flatMap((m) => [...m.corePlan.run, ...m.extensionPlans.flatMap((p) => p.run)]), ...CUSTOM_GUARDS];
+
+// 老 auto-discovery（不在任何层清单的 tools/check-*.js 照跑）弃用中：只对复制式接入有意义，
+// v2.2 起唯一推荐入口是 config.customGuards；与 customGuards 撞名 = 双跑风险，直接 FAIL。
+const LAYER_OF_GLOBAL = new Set(Object.values(LAYER_GUARDS).flat());
+const autoDiscovered = presentCore.filter((g) => !LAYER_OF_GLOBAL.has(g));
+for (const g of autoDiscovered) {
+  const base = normalizeGuardName(g);
+  const clash = CUSTOM_GUARDS.find((c) => c.name === base || c.name === base.replace(/^check-/, ''));
+  if (clash) {
+    console.log(`✗ tools/${g}（auto-discovery）与 customGuards['${clash.name}'] 撞名 —— 会双跑同一检查；删除该文件或改 customGuards name`);
+    console.log('RESULT: FAIL');
+    process.exit(1);
+  }
+}
 const modTag = (name) => (name ? `${name}/` : '');
 const summaryName = (check) => `${modTag(check.module)}${normalizeGuardName(check.file)}`;
 const coreSkipped = resolvedModules.flatMap((m) => m.corePlan.skipped.map((s) => ({ ...s, module: m.name })));
@@ -5462,7 +5543,8 @@ if (presentCore.length === 0) {
   if (flags.list) {
     console.log(`${headerLabel()}${flags.all ? '（--all 无视 core 层开关）' : ''} · 将跑 ${checks.length} 个 guard（tools：${SELF_DIR}）：`);
     printModuleLayers();
-    for (const check of checks) console.log(`  - ${check.label}`);
+    for (const check of checks) console.log(`  - ${check.label}${check.kind === 'custom' ? `（custom：${check.command}）` : ''}`);
+    for (const g of autoDiscovered) console.log(`  ⚠ tools/${g} 不在任何层清单——auto-discovery 弃用中（≥2 个 minor 后移除），迁移到 config.customGuards`);
     for (const s of coreSkipped) console.log(`  · 跳过 ${modTag(s.module)}${s.file}（属未启用层 '${s.layer}'——启用在 docs/design-spec/config.json 配 kit.layers；无 config 的独立项目才改本文件 DEFAULT_INSTALLED_LAYERS）`);
     for (const plan of allExtensionPlans) {
       if (plan.status === 'missing-dir') {
@@ -5490,6 +5572,7 @@ if (presentCore.length === 0) {
       }
     }
     for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ⚠ 未知 layer / extension '${name}'（kit-doctor 会提示拼写；run-checks --strict 会失败）`);
+    for (const g of autoDiscovered) console.log(`  ⚠ tools/${g} 不在任何层清单——auto-discovery 弃用中（≥2 个 minor 后移除），迁移到 config.customGuards`);
     console.log('');
     const results = [];
     for (const check of checks) {
@@ -5504,8 +5587,11 @@ if (presentCore.length === 0) {
     console.log('\n════════ 汇总 ════════');
     let anyFail = false;
     for (const r of results) {
-      const verdict = r.resultLine || `(未打印 RESULT，退出码 ${r.code})`;
-      const failed = r.code !== 0 || (r.resultLine && r.resultLine.includes('FAIL')) || !r.resultLine;
+      // custom guard 判定契约：exit != 0 永远 FAIL；RESULT: FAIL 可否决零退出码；
+      // 无 RESULT 行按 exit code（内置 guard 仍要求必须打 RESULT）。
+      const isCustom = r.check.kind === 'custom';
+      const verdict = r.resultLine || (isCustom ? `(无 RESULT 行，按退出码判定)` : `(未打印 RESULT，退出码 ${r.code})`);
+      const failed = r.code !== 0 || (r.resultLine && r.resultLine.includes('FAIL')) || (!isCustom && !r.resultLine);
       if (failed) anyFail = true;
       console.log(`  ${failed ? '✗' : '✓'} ${summaryName(r.check)}  exit=${r.code}  ${verdict}`);
     }
@@ -5527,8 +5613,10 @@ if (presentCore.length === 0) {
     }
 
     if (anyFail) {
-      const firstFailed = results.find(r => r.code !== 0 || !r.resultLine || (r.resultLine || '').includes('FAIL'));
-      const hint = firstFailed ? `\`${process.execPath} ${firstFailed.check.absPath}\`` : '`node tools/run-checks.js --list`';
+      const firstFailed = results.find(r => r.code !== 0 || (r.check.kind !== 'custom' && !r.resultLine) || (r.resultLine || '').includes('FAIL'));
+      const hint = firstFailed
+        ? (firstFailed.check.kind === 'custom' ? `\`${firstFailed.check.command}\`` : `\`${process.execPath} ${firstFailed.check.absPath}\``)
+        : '`node tools/run-checks.js --list`';
       console.log(`\n修法：上面标 ✗ 的逐个单跑 ${hint} 看详细违规再修`);
       console.log('\nRESULT: FAIL');
       process.exitCode = 1;
