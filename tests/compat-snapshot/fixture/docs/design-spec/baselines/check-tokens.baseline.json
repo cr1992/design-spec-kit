@@ -1,0 +1,30 @@
+{
+  "note": "已认证保留的 token 违规清单（按出现次数计）。同 key 再新增一处也算新增，需修代码或显式加到这里。",
+  "generatedAt": "2026-07-08",
+  "reason": "first run",
+  "totalEntries": 4,
+  "files": {
+    "design/pages/sample.css": [
+      {
+        "line": 1,
+        "kind": "bare-hex",
+        "match": "#22cc88"
+      },
+      {
+        "line": 1,
+        "kind": "off-space",
+        "match": "padding:7px"
+      },
+      {
+        "line": 2,
+        "kind": "off-radius",
+        "match": "border-radius:5px"
+      },
+      {
+        "line": 2,
+        "kind": "off-fs",
+        "match": "font-size:13px"
+      }
+    ]
+  }
+}

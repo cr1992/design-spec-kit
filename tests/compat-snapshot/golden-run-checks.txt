@@ -1,0 +1,59 @@
+聚合入口：启用层/扩展 [base, handoff, flutter-visual] · 串跑 7 个 guard
+  · 跳过 check-i18n.js（未启用层 'i18n'）
+
+── check-changelog.js ──────────────────────────────
+[check-changelog] scanned docs/design-spec/CHANGELOG.md · 14 行 · 2 条目 · 1 个日期段 · 索引标签 2
+[check-changelog] ✓ 同日合并：每个日期仅一段
+[check-changelog] ✓ 文件长度：14 行（≤ 200）
+[check-changelog] ✓ 条目深度：均 ≤ 3 子 bullet
+[check-changelog] ✓ 模块索引一致性：条目标签 ⊆ 索引，且索引无零使用项
+
+[check-changelog] RESULT: PASS
+── check-deviation.js ──────────────────────────────
+[check-deviation] scanned 1 files · 1 markers · ledger 1 rows · gaps 0
+
+[check-deviation] ℹ 待裁决队列（manifest 1 份）：delegated open 1 · contract_ref=TBD 0（随迭代评审收敛，非 FAIL）
+
+[check-deviation] ✓ check-deviation: 代码标记 ↔ 台账双向、台账 ↔ manifest 屏引用全部对齐，无缺口
+
+[check-deviation] RESULT: PASS
+── check-icons.js ──────────────────────────────
+[check-icons] scanned 2 files · 2 icon names · 2 defs · drift 0 · shared(dup) 0
+
+[check-icons] RESULT: PASS
+── check-manifest.js ──────────────────────────────
+[check-manifest] scanned 1 manifest · schema=docs/design-spec/screen-manifest.schema.json · errors 0 · warnings 0
+[check-manifest]   ✓ sample-screen.manifest.generated.json
+
+[check-manifest] ✓ check-manifest: 全部生成物过 schema + 语义规则
+
+[check-manifest] RESULT: PASS
+── check-orphan-css.js ──────────────────────────────
+[check-orphan-css] css defs: 6 classes (2 files) · usage面: 2 files · orphans: 1
+[check-orphan-css] baseline: 1 entries · removed: 0 · new: 0
+[check-orphan-css] ✓ check-orphan-css: 0 新增 · 0 减少 · baseline 保持不变
+
+[check-orphan-css] RESULT: PASS
+── check-tokens.js ──────────────────────────────
+[check-tokens] scanned 3 files · 4 violations
+[check-tokens] baseline: 4 entries · removed: 0 · new: 0
+[check-tokens] ✓ check-tokens: 0 新增 · 0 减少 · baseline 保持不变
+
+[check-tokens] RESULT: PASS
+── flutter-visual/check-flutter-visual.js ──────────────────────────────
+[check-flutter-visual] flutter-visual: errors 0 · warnings 0 · config-only
+[check-flutter-visual]   ✓ sample-screen: anchors=2 contracts=1 interactions=1 evidence=2
+[check-flutter-visual]   · config-only 模式：未执行 Flutter；需要实现核对时加 --execute-impl
+
+[check-flutter-visual] RESULT: PASS
+
+════════ 汇总 ════════
+  ✓ check-changelog  exit=0  RESULT: PASS
+  ✓ check-deviation  exit=0  RESULT: PASS
+  ✓ check-icons  exit=0  RESULT: PASS
+  ✓ check-manifest  exit=0  RESULT: PASS
+  ✓ check-orphan-css  exit=0  RESULT: PASS
+  ✓ check-tokens  exit=0  RESULT: PASS
+  ✓ check-flutter-visual  exit=0  RESULT: PASS
+
+RESULT: PASS

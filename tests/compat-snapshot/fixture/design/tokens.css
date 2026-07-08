@@ -1,0 +1,8 @@
+:root {
+  --sample-primary: #3366ff;
+  --sample-surface: #ffffff;
+}
+.sample-card { color: var(--sample-primary); padding: 8px; border-radius: 4px; }
+.sample-card-title { font-size: 14px; }
+.sample-legacy { color: #ff0000; font-size: 13px; }
+.sample-unused { margin: 4px; }

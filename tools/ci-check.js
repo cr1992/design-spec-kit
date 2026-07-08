@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -44,6 +45,14 @@ for (const file of await collectExtensionJs('extensions')) {
 
 run('kit-doctor source mode', process.execPath, ['tools/kit-doctor.js', '--source']);
 run('run-checks plan', process.execPath, ['tools/run-checks.js', '--list']);
+// compat snapshot 是 kit 源仓 CI 资产，不进 bundle（fixture 的稳态 *.baseline.json
+// 被 bundle 排除规则挡住，硬纳入会让拆包环境必然 FAIL）。bundle 拆包后无 tests/ → 明确 skip。
+if (existsSync(path.join(KIT_ROOT, 'tests/compat-snapshot/run.js'))) {
+  run('v2.1 compat snapshot', process.execPath, ['tests/compat-snapshot/run.js']);
+} else {
+  console.log('\n── v2.1 compat snapshot ─────────────────────────────');
+  console.log('· 跳过：tests/ 不随 bundle 分发（source-only 检查，kit 源仓 CI 才跑）');
+}
 run('bundle drift check', process.execPath, ['tools/build-bundle.js', '--check']);
 
 console.log('\nRESULT: PASS');

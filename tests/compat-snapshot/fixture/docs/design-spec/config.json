@@ -1,0 +1,93 @@
+{
+  "kit": {
+    "layers": [
+      "base",
+      "handoff",
+      "flutter-visual"
+    ]
+  },
+  "guards": {
+    "check-tokens": {
+      "scanRoots": [
+        "design"
+      ],
+      "rootFiles": [],
+      "skipDirs": [
+        "node_modules"
+      ],
+      "baselinePath": "docs/design-spec/baselines/check-tokens.baseline.json",
+      "fontSizes": [
+        12,
+        14,
+        16
+      ],
+      "spacing": [
+        4,
+        8,
+        12,
+        16
+      ],
+      "radii": [
+        0,
+        4,
+        8
+      ]
+    },
+    "check-icons": {
+      "scanRoots": [
+        "design"
+      ],
+      "registrySources": [
+        "design/icons.js"
+      ],
+      "ignore": [],
+      "baselinePath": "docs/design-spec/baselines/check-icons.baseline.json"
+    },
+    "check-changelog": {
+      "changelogPath": "docs/design-spec/CHANGELOG.md",
+      "warnLines": 200,
+      "maxSubItems": 3
+    },
+    "check-orphan-css": {
+      "cssRoots": [
+        "design"
+      ],
+      "usageRoots": [
+        "design"
+      ],
+      "skipDirs": [
+        "node_modules"
+      ],
+      "baselinePath": "docs/design-spec/baselines/check-orphan-css.baseline.json"
+    },
+    "check-manifest": {
+      "manifestDir": "docs/design-spec/manifests",
+      "schemaPath": "docs/design-spec/screen-manifest.schema.json",
+      "screensListPath": "docs/design-spec/screens.txt",
+      "sourceManifestDir": "design/docs/manifests",
+      "sourceManifestSuffix": ".manifest.json"
+    },
+    "check-deviation": {
+      "implRoots": [
+        "impl"
+      ],
+      "ledgerPath": "docs/design-spec/DEVIATION-LEDGER.md",
+      "manifestDir": "docs/design-spec/manifests"
+    }
+  },
+  "extensions": {
+    "flutter-visual": {
+      "screens": [
+        {
+          "id": "sample-screen",
+          "manifest": "docs/design-spec/manifests/sample-screen.manifest.generated.json",
+          "command": "flutter test test/sample_screen_test.dart --reporter expanded",
+          "evidence": [
+            "sample panel uses dark glass surface in light and dark",
+            "sample panel opens with animated presentation"
+          ]
+        }
+      ]
+    }
+  }
+}

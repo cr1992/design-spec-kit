@@ -1,0 +1,14 @@
+{
+  "note": "已认证「保留备查」的死 CSS 清单——进此账本须在 DESIGN-REF 登记保留原因。新增孤儿须删码或显式加到这里。",
+  "generatedAt": "2026-07-08",
+  "reason": "first run",
+  "totalEntries": 1,
+  "files": {
+    "design/tokens.css": [
+      {
+        "line": 8,
+        "name": "sample-unused"
+      }
+    ]
+  }
+}

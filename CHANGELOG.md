@@ -3,6 +3,10 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## Unreleased
+
+- [工程] 新增 v2.1 兼容 snapshot 对拍（`tests/compat-snapshot/`，MULTI-MODULE-PROPOSAL 成功标准 1 的安全网）：冻结单模块消费仓 fixture 覆盖 `base + handoff + flutter-visual(config-only)` 三层——base 4 guard 带已入账 baseline、manifest schema/语义/source-drift、deviation 双向对账 + delegated 队列;run-checks 输出与 golden 逐字节比对 + exit 断言 + fixture 防改写检查;接入 `ci-check.js`（tests/ 不随 bundle 分发,拆包环境明确 skip）。guard 输出的合法演进走 `--update`,golden 与实现同 commit。
+
 ## v2.1.0 — 2026-07-08
 
 - [文档] `extensions/flutter-visual/README.md` 补 config-only 显式警示：默认模式 PASS ≠ evidence 已执行，接入方必须给 `--execute-impl` 安排本地 DoD 或带 Flutter 的 CI 执行位。
