@@ -1,0 +1,19 @@
+{
+  "kit": { "layers": ["base"] },
+  "guards": {
+    "check-tokens": {
+      "scanRoots": ["design"],
+      "baselinePath": "docs/design-spec/baselines/check-tokens.baseline.json",
+      "fontSizes": [12, 14, 16],
+      "spacing": [4, 8, 12, 16],
+      "radii": [0, 4, 8]
+    }
+  },
+  "modules": {
+    "mobile-app": {
+      "guards": {
+        "check-tokens": { "scanRoots": ["design"] }
+      }
+    }
+  }
+}

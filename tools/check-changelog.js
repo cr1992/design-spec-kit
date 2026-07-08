@@ -34,7 +34,13 @@ async function readDesignSpecConfig() {
   catch { return {}; }
 }
 const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
-const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-changelog'] || DESIGN_SPEC_CONFIG.guards?.['check-changelog.js'] || {};
+// ── 多模块 profile（MULTI-MODULE-PROPOSAL 方案 1）：runner 经 DESIGN_SPEC_KIT_MODULE 传模块名 ──
+const moduleOverride = '';   // 沙箱手改位：无 shell 粘贴执行时手填模块名
+const KIT_MODULE = moduleOverride || globalThis.process?.env?.DESIGN_SPEC_KIT_MODULE || '';
+const pickGuardCfg = (node) => node?.guards?.['check-changelog'] || node?.guards?.['check-changelog.js'] || {};
+const MODULE_GUARD_CONFIG = KIT_MODULE ? pickGuardCfg(DESIGN_SPEC_CONFIG.modules?.[KIT_MODULE]) : {};
+// key 级浅合并：模块键覆盖顶层公共缺省（数组整键替换，不做深合并）
+const GUARD_CONFIG = KIT_MODULE ? { ...pickGuardCfg(DESIGN_SPEC_CONFIG), ...MODULE_GUARD_CONFIG } : pickGuardCfg(DESIGN_SPEC_CONFIG);
 const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
 const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
 

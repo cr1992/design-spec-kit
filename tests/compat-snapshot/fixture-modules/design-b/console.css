@@ -1,0 +1,3 @@
+.console-shell { color: var(--sample-primary); padding: 8px; }
+.console-shell-title { font-size: 15px; }
+.console-stale { margin: 4px; }

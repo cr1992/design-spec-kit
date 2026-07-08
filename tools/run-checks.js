@@ -46,9 +46,35 @@ const PROJECT_CONFIG = await readProjectConfig();
 // 没有配置时回退 base。这样 submodule 不需要改源码。
 const configuredLayers = PROJECT_CONFIG.kit?.layers;
 const INSTALLED_LAYERS = Array.isArray(configuredLayers) && configuredLayers.length > 0 ? configuredLayers : DEFAULT_INSTALLED_LAYERS;
-const ENABLED_CORE_LAYERS = INSTALLED_LAYERS.filter(isKnownLayer);
-const ENABLED_EXTENSIONS = INSTALLED_LAYERS.filter(isKnownExtension);
-const UNKNOWN_LAYER_NAMES = INSTALLED_LAYERS.filter((name) => !isKnownLayer(name) && !isKnownExtension(name));
+
+// ─── 多模块 profile（MULTI-MODULE-PROPOSAL 方案 1）─────────────────
+// modules 分节存在 → 每个模块按自己的 effective layers（modules.<m>.layers ?? kit.layers）
+// 重复执行 guard，输出一律带 `<module>/` 前缀（哪怕只有一个显式模块——两态、无第三态）；
+// modules 不存在 → 单匿名默认模块，v2.1 行为逐字节不变（compat snapshot 对拍）。
+const MODULES_CONFIG = PROJECT_CONFIG.modules && typeof PROJECT_CONFIG.modules === 'object' && !Array.isArray(PROJECT_CONFIG.modules)
+  ? PROJECT_CONFIG.modules : null;
+// 空 modules 分节 = 所有 guard 都不跑的 false green，直接 FAIL（要么声明模块，要么删分节回单模块模式）
+if (MODULES_CONFIG && Object.keys(MODULES_CONFIG).length === 0) {
+  console.log('✗ docs/design-spec/config.json 的 modules 分节为空 —— 按模块规划后没有任何 guard 会跑（false green）');
+  console.log('  修法：在 modules 下声明至少一个模块，或删除 modules 分节回到单模块模式');
+  console.log('RESULT: FAIL');
+  process.exit(1);
+}
+// [{ name: 'mobile-app'|null, layers: [...] }]；name=null = 匿名默认模块（旧行为）
+const MODULE_PLANS = MODULES_CONFIG
+  ? Object.entries(MODULES_CONFIG).map(([name, mod]) => ({
+      name,
+      layers: Array.isArray(mod?.layers) && mod.layers.length > 0 ? mod.layers : INSTALLED_LAYERS,
+    }))
+  : [{ name: null, layers: INSTALLED_LAYERS }];
+
+const layerSplit = (layers) => ({
+  core: layers.filter(isKnownLayer),
+  extensions: layers.filter(isKnownExtension),
+  unknown: layers.filter((name) => !isKnownLayer(name) && !isKnownExtension(name)),
+});
+// 全局未知名集合（跨模块去重，供 --strict / 提示用）
+const UNKNOWN_LAYER_NAMES = [...new Set(MODULE_PLANS.flatMap((m) => layerSplit(m.layers).unknown))];
 
 const GUARD_PATTERN = /^check-.+\.js$/i;          // guard 文件命名约定
 const EXCLUDE = new Set([]);                       // 需要排除的具体文件名（留空即可）
@@ -68,9 +94,9 @@ async function discoverCoreGuards() {
     .sort();
 }
 
-async function discoverEnabledExtensions() {
+async function discoverEnabledExtensions(extensionNames) {
   const plans = [];
-  for (const name of ENABLED_EXTENSIONS) {
+  for (const name of extensionNames) {
     const meta = KNOWN_EXTENSIONS[name];
     const dir = path.join(KIT_ROOT, meta.dir);
     let entries = null;
@@ -110,10 +136,10 @@ function parseFlags(argv) {
 }
 
 // 按层把「存在的 core guard」分成三份：将跑 / 跳过（属已知但未启用的层）/ 启用层缺文件。
-function planCoreByLayers(present, all) {
+function planCoreByLayers(present, all, coreLayers) {
   const layerOf = new Map();                                        // 文件名 -> 所属层
   for (const [layer, files] of Object.entries(LAYER_GUARDS)) for (const f of files) layerOf.set(f, layer);
-  const enabled = new Set(ENABLED_CORE_LAYERS.flatMap(l => LAYER_GUARDS[l] || []));
+  const enabled = new Set(coreLayers.flatMap(l => LAYER_GUARDS[l] || []));
   const run = [], skipped = [];
   for (const g of present) {
     if (all || enabled.has(g) || !layerOf.has(g)) {
@@ -131,11 +157,25 @@ function normalizeGuardName(n) {
   return base.endsWith('.js') ? base.slice(0, -3) : base;
 }
 
+// --only 匹配：裸 guard 名匹配所有模块的该 guard；`<module>/<guard>` 只匹配该模块。
+// fail closed：多模块下 `a/b` 的 a 既不是已声明模块也不是 known extension → 视为拼错的模块名，
+// 不降级成裸名匹配（那会静默跨模块全跑），走「未匹配到任何 guard」FAIL。
 function matchesOnly(check, want) {
+  const slash = want.indexOf('/');
+  if (slash > 0 && MODULES_CONFIG) {
+    const head = want.slice(0, slash);
+    if (Object.prototype.hasOwnProperty.call(MODULES_CONFIG, head)) {
+      if (check.module !== head) return false;
+      want = want.slice(slash + 1);
+    } else if (!isKnownExtension(head)) {
+      return false;
+    }
+  }
+  const baseLabel = check.module ? check.label.slice(check.module.length + 1) : check.label;
   const normalized = normalizeGuardName(want);
-  return normalizeGuardName(check.label) === normalized ||
+  return normalizeGuardName(baseLabel) === normalized ||
     normalizeGuardName(check.file) === normalized ||
-    check.label.replace(/\.js$/, '') === normalized;
+    baseLabel.replace(/\.js$/, '') === normalized;
 }
 
 // 子进程跑一个 guard，cwd 继承调用方 cwd（不是 SELF_DIR）——guard 的相对路径配置
@@ -143,9 +183,12 @@ function matchesOnly(check, want) {
 function runOne(check, flags) {
   return new Promise(resolve => {
     const passArgs = check.kind === 'extension' && flags.executeImpl ? ['--execute-impl'] : [];
+    // 模块上下文经环境变量传给 guard（guard 内以 modules.<m>.guards.<g> ⊕ 顶层 guards.<g> 合成 effective config）
+    const env = check.module ? { ...process.env, DESIGN_SPEC_KIT_MODULE: check.module } : process.env;
     const child = spawn(process.execPath, [check.absPath, ...passArgs], {
       cwd: process.cwd(),
       stdio: ['ignore', 'pipe', 'pipe'],
+      env,
     });
     let out = '';
     child.stdout.on('data', d => { out += d.toString(); });
@@ -171,14 +214,39 @@ function enabledLabel() {
 
 const flags = parseFlags(EFFECTIVE_ARGS);
 const presentCore = await discoverCoreGuards();
-const corePlan = planCoreByLayers(presentCore, flags.all);
-const extensionPlans = await discoverEnabledExtensions();
-let checks = [...corePlan.run, ...extensionPlans.flatMap((p) => p.run)];
 
-const extensionMissingGuards = extensionPlans
+// 逐模块规划：每个模块按自己的 effective layers 生成 core/extension 计划；
+// 匿名默认模块（name=null）不加前缀，v2.1 输出逐字节不变。
+const resolvedModules = [];
+for (const mp of MODULE_PLANS) {
+  const split = layerSplit(mp.layers);
+  const corePlan = planCoreByLayers(presentCore, flags.all, split.core);
+  const extensionPlans = (await discoverEnabledExtensions(split.extensions)).map((p) => ({ ...p, module: mp.name }));
+  const decorate = (check) => ({ ...check, module: mp.name, label: mp.name ? `${mp.name}/${check.label}` : check.label });
+  corePlan.run = corePlan.run.map(decorate);
+  for (const p of extensionPlans) p.run = p.run.map(decorate);
+  resolvedModules.push({ name: mp.name, layers: mp.layers, corePlan, extensionPlans });
+}
+
+let checks = resolvedModules.flatMap((m) => [...m.corePlan.run, ...m.extensionPlans.flatMap((p) => p.run)]);
+const modTag = (name) => (name ? `${name}/` : '');
+const summaryName = (check) => `${modTag(check.module)}${normalizeGuardName(check.file)}`;
+const coreSkipped = resolvedModules.flatMap((m) => m.corePlan.skipped.map((s) => ({ ...s, module: m.name })));
+const coreMissing = resolvedModules.flatMap((m) => m.corePlan.missing.map((file) => ({ file, module: m.name })));
+const allExtensionPlans = resolvedModules.flatMap((m) => m.extensionPlans);
+const extensionMissingGuards = allExtensionPlans
   .filter((p) => p.status === 'present')
-  .flatMap((p) => p.missing.map((file) => ({ extension: p.name, file })));
-const missingExtensionDirs = extensionPlans.filter((p) => p.status === 'missing-dir');
+  .flatMap((p) => p.missing.map((file) => ({ extension: p.name, module: p.module, file })));
+const missingExtensionDirs = allExtensionPlans.filter((p) => p.status === 'missing-dir');
+
+function headerLabel() {
+  if (!MODULES_CONFIG) return `启用层/扩展 [${enabledLabel()}]`;
+  return `模块 [${MODULE_PLANS.map((m) => m.name).join(', ')}]`;
+}
+function printModuleLayers() {
+  if (!MODULES_CONFIG) return;
+  for (const m of resolvedModules) console.log(`  · ${m.name}: layers [${m.layers.join(', ')}]`);
+}
 
 if (presentCore.length === 0) {
   console.log(`✗ ${SELF_DIR} 下没找到任何 check-*.js —— 至少应装 guard①（check-tokens.js）`);
@@ -189,47 +257,48 @@ if (presentCore.length === 0) {
   if (flags.only) {
     const matched = checks.filter((check) => matchesOnly(check, flags.only));   // --only 无视 core 层开关；extension 仍须 opt-in
     if (matched.length === 0) {
-      console.log(`✗ --only ${flags.only} 未匹配到任何已发现 guard（core 存在：${presentCore.map(normalizeGuardName).join(', ')}；enabled extensions：${ENABLED_EXTENSIONS.join(', ') || '无'}）`);
+      console.log(`✗ --only ${flags.only} 未匹配到任何已发现 guard（core 存在：${presentCore.map(normalizeGuardName).join(', ')}；enabled extensions：${[...new Set(resolvedModules.flatMap((m) => layerSplit(m.layers).extensions))].join(', ') || '无'}）`);
       console.log('RESULT: FAIL');
-      process.exitCode = 1;
-      checks = [];
+      process.exit(1);   // 立即结束：不落进空 checks 分支重复打印 RESULT（末行 RESULT 是判读约定）
     } else {
       checks = matched;
-      corePlan.skipped = []; corePlan.missing = [];
+      coreSkipped.length = 0; coreMissing.length = 0;
       extensionMissingGuards.length = 0;
     }
   }
 
   const unknownIsFail = flags.strict && UNKNOWN_LAYER_NAMES.length > 0;
   const missingExtensionDirIsFail = flags.strict && missingExtensionDirs.length > 0;
-  const missingIsFail = corePlan.missing.length > 0 || extensionMissingGuards.length > 0 || missingExtensionDirIsFail;
+  const missingIsFail = coreMissing.length > 0 || extensionMissingGuards.length > 0 || missingExtensionDirIsFail;
 
   if (flags.list) {
-    console.log(`启用层/扩展 [${enabledLabel()}]${flags.all ? '（--all 无视 core 层开关）' : ''} · 将跑 ${checks.length} 个 guard（tools：${SELF_DIR}）：`);
+    console.log(`${headerLabel()}${flags.all ? '（--all 无视 core 层开关）' : ''} · 将跑 ${checks.length} 个 guard（tools：${SELF_DIR}）：`);
+    printModuleLayers();
     for (const check of checks) console.log(`  - ${check.label}`);
-    for (const s of corePlan.skipped) console.log(`  · 跳过 ${s.file}（属未启用层 '${s.layer}'——启用在 docs/design-spec/config.json 配 kit.layers；无 config 的独立项目才改本文件 DEFAULT_INSTALLED_LAYERS）`);
-    for (const plan of extensionPlans) {
+    for (const s of coreSkipped) console.log(`  · 跳过 ${modTag(s.module)}${s.file}（属未启用层 '${s.layer}'——启用在 docs/design-spec/config.json 配 kit.layers；无 config 的独立项目才改本文件 DEFAULT_INSTALLED_LAYERS）`);
+    for (const plan of allExtensionPlans) {
       if (plan.status === 'missing-dir') {
         const mark = flags.strict ? '✗' : '·';
         const label = flags.strict ? 'extension' : '跳过 extension';
         const strictHint = flags.strict ? '；--strict 要求已启用 extension 必须已安装' : '';
-        console.log(`  ${mark} ${label} '${plan.name}'（${plan.dir} 不存在；如需启用请安装该 extension，或从 kit.layers 移除 '${plan.name}'${strictHint}）`);
+        console.log(`  ${mark} ${label} '${modTag(plan.module)}${plan.name}'（${plan.dir} 不存在；如需启用请安装该 extension，或从 kit.layers 移除 '${plan.name}'${strictHint}）`);
       }
     }
-    for (const m of corePlan.missing) console.log(`  ✗ 缺失 ${m}（启用层期望但文件不在——从 kit 拷入或关掉该层）`);
-    for (const m of extensionMissingGuards) console.log(`  ✗ 缺失 ${m.extension}/${m.file}（已安装 extension 目录但 guard 文件不完整）`);
+    for (const m of coreMissing) console.log(`  ✗ 缺失 ${modTag(m.module)}${m.file}（启用层期望但文件不在——从 kit 拷入或关掉该层）`);
+    for (const m of extensionMissingGuards) console.log(`  ✗ 缺失 ${modTag(m.module)}${m.extension}/${m.file}（已安装 extension 目录但 guard 文件不完整）`);
     for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ⚠ 未知 layer / extension '${name}'（已知层：${Object.keys(LAYER_GUARDS).join(', ')}；已知 extension：${Object.keys(KNOWN_EXTENSIONS).join(', ')}）`);
     console.log(missingIsFail || unknownIsFail ? 'RESULT: FAIL' : 'RESULT: PASS');
     if (missingIsFail || unknownIsFail) process.exitCode = 1;
   } else if (checks.length > 0) {
-    console.log(`聚合入口：启用层/扩展 [${enabledLabel()}]${flags.all ? '（--all）' : ''}${flags.executeImpl ? '（--execute-impl）' : ''} · 串跑 ${checks.length} 个 guard`);
-    for (const s of corePlan.skipped) console.log(`  · 跳过 ${s.file}（未启用层 '${s.layer}'）`);
-    for (const plan of extensionPlans) {
+    console.log(`聚合入口：${headerLabel()}${flags.all ? '（--all）' : ''}${flags.executeImpl ? '（--execute-impl）' : ''} · 串跑 ${checks.length} 个 guard`);
+    printModuleLayers();
+    for (const s of coreSkipped) console.log(`  · 跳过 ${modTag(s.module)}${s.file}（未启用层 '${s.layer}'）`);
+    for (const plan of allExtensionPlans) {
       if (plan.status === 'missing-dir') {
         const mark = flags.strict ? '✗' : '·';
         const label = flags.strict ? 'extension' : '跳过 extension';
         const strictHint = flags.strict ? '；--strict 要求已启用 extension 必须已安装' : '';
-        console.log(`  ${mark} ${label} '${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
+        console.log(`  ${mark} ${label} '${modTag(plan.module)}${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
       }
     }
     for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ⚠ 未知 layer / extension '${name}'（kit-doctor 会提示拼写；run-checks --strict 会失败）`);
@@ -238,7 +307,7 @@ if (presentCore.length === 0) {
     for (const check of checks) {
       console.log(`── ${check.label} ──────────────────────────────`);
       const r = await runOne(check, flags);
-      const prefix = `[${normalizeGuardName(check.label)}] `;
+      const prefix = `[${summaryName(check)}] `;
       const prefixed = r.out.split('\n').map(l => l ? `${prefix}${l}` : l).join('\n');
       process.stdout.write(prefixed.endsWith('\n') ? prefixed : prefixed + '\n');
       results.push({ ...r, resultLine: lastResultLine(r.out) });
@@ -250,19 +319,19 @@ if (presentCore.length === 0) {
       const verdict = r.resultLine || `(未打印 RESULT，退出码 ${r.code})`;
       const failed = r.code !== 0 || (r.resultLine && r.resultLine.includes('FAIL')) || !r.resultLine;
       if (failed) anyFail = true;
-      console.log(`  ${failed ? '✗' : '✓'} ${normalizeGuardName(r.check.label)}  exit=${r.code}  ${verdict}`);
+      console.log(`  ${failed ? '✗' : '✓'} ${summaryName(r.check)}  exit=${r.code}  ${verdict}`);
     }
-    for (const m of corePlan.missing) {
+    for (const m of coreMissing) {
       anyFail = true;
-      console.log(`  ✗ ${normalizeGuardName(m)}  缺失（启用层期望但文件不在 tools/——从 kit 拷入，或在 config 里关掉该层）`);
+      console.log(`  ✗ ${modTag(m.module)}${normalizeGuardName(m.file)}  缺失（启用层期望但文件不在 tools/——从 kit 拷入，或在 config 里关掉该层）`);
     }
     for (const m of extensionMissingGuards) {
       anyFail = true;
-      console.log(`  ✗ ${m.extension}/${normalizeGuardName(m.file)}  缺失（extension 目录不完整）`);
+      console.log(`  ✗ ${modTag(m.module)}${m.extension}/${normalizeGuardName(m.file)}  缺失（extension 目录不完整）`);
     }
     if (missingExtensionDirIsFail) {
       anyFail = true;
-      for (const plan of missingExtensionDirs) console.log(`  ✗ ${plan.name}  已启用但 extension 目录不存在（${plan.dir}）`);
+      for (const plan of missingExtensionDirs) console.log(`  ✗ ${modTag(plan.module)}${plan.name}  已启用但 extension 目录不存在（${plan.dir}）`);
     }
     if (unknownIsFail) {
       anyFail = true;
@@ -279,16 +348,16 @@ if (presentCore.length === 0) {
       console.log('\nRESULT: PASS');
     }
   } else {
-    for (const plan of extensionPlans) {
+    for (const plan of allExtensionPlans) {
       if (plan.status === 'missing-dir') {
         const mark = flags.strict ? '✗' : '·';
         const label = flags.strict ? 'extension' : '跳过 extension';
         const strictHint = flags.strict ? '；--strict 要求已启用 extension 必须已安装' : '';
-        console.log(`  ${mark} ${label} '${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
+        console.log(`  ${mark} ${label} '${modTag(plan.module)}${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
       }
     }
     for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ⚠ 未知 layer / extension '${name}'（kit-doctor 会提示拼写；run-checks --strict 会失败）`);
-    console.log(corePlan.missing.length || extensionMissingGuards.length || missingExtensionDirIsFail || unknownIsFail ? 'RESULT: FAIL' : 'RESULT: PASS');
-    if (corePlan.missing.length || extensionMissingGuards.length || missingExtensionDirIsFail || unknownIsFail) process.exitCode = 1;
+    console.log(coreMissing.length || extensionMissingGuards.length || missingExtensionDirIsFail || unknownIsFail ? 'RESULT: FAIL' : 'RESULT: PASS');
+    if (coreMissing.length || extensionMissingGuards.length || missingExtensionDirIsFail || unknownIsFail) process.exitCode = 1;
   }
 }

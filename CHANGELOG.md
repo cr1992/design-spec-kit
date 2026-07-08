@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- [多模块] 落地 MULTI-MODULE-PROPOSAL 方案 1：`config.json` 支持 `modules.<name>` 分节——runner（run-checks）按模块生成 effective config 逐模块执行 guard，输出一律带 `<module>/` 前缀（两态：无 modules = v2.1 逐字节不变，有 modules = 全前缀）；guard 侧 key 级浅合并（模块键覆盖顶层公共缺省）+ 模块 layers 子集；baseline 强制分账（不继承顶层 baselinePath，缺省 `docs/design-spec/baselines/<module>/<guard>.baseline.json`）+ 迁移防线（模块 baseline 缺失而旧全局仍在 → FAIL，禁静默重建空债）；`--only` 支持 `<module>/<guard>` 限定与裸名跨模块匹配，未知模块名 fail closed（不降级裸名静默跨模块全跑）；空 `modules: {}` 分节 = false green，run-checks 与 kit-doctor 都直接 FAIL；`--only` 无匹配时立即退出，修掉「RESULT: FAIL 后又打 RESULT: PASS」的双 RESULT 既有怪癖（末行 RESULT 是判读约定）；kit-doctor ②探针逐模块展开、①⑤按跨模块并集；flutter-visual 支持模块级 extensions 覆盖。compat snapshot 扩到 5 场景（v2.1 单模块 / 双模块 profile / 迁移防线、--only 未知模块、空 modules 三个负向）。
 - [工程] 新增 v2.1 兼容 snapshot 对拍（`tests/compat-snapshot/`，MULTI-MODULE-PROPOSAL 成功标准 1 的安全网）：冻结单模块消费仓 fixture 覆盖 `base + handoff + flutter-visual(config-only)` 三层——base 4 guard 带已入账 baseline、manifest schema/语义/source-drift、deviation 双向对账 + delegated 队列;run-checks 输出与 golden 逐字节比对 + exit 断言 + fixture 防改写检查;接入 `ci-check.js`（tests/ 不随 bundle 分发,拆包环境明确 skip）。guard 输出的合法演进走 `--update`,golden 与实现同 commit。
 
 ## v2.1.0 — 2026-07-08

@@ -1,0 +1,62 @@
+{
+  "kit": { "layers": ["base"] },
+  "guards": {
+    "check-changelog": {
+      "changelogPath": "docs/design-spec/CHANGELOG.md",
+      "warnLines": 200,
+      "maxSubItems": 3
+    },
+    "check-tokens": {
+      "rootFiles": [],
+      "skipDirs": ["node_modules"],
+      "fontSizes": [12, 14, 15, 16],
+      "spacing": [4, 8, 12, 16],
+      "radii": [0, 4, 8]
+    }
+  },
+  "modules": {
+    "mobile-app": {
+      "guards": {
+        "check-tokens": { "scanRoots": ["design-a"] },
+        "check-icons": {
+          "scanRoots": ["design-a"],
+          "registrySources": ["design-a/icons.js"],
+          "ignore": []
+        },
+        "check-orphan-css": {
+          "cssRoots": ["design-a"],
+          "usageRoots": ["design-a"],
+          "skipDirs": ["node_modules"]
+        }
+      }
+    },
+    "web-console": {
+      "layers": ["base", "handoff"],
+      "guards": {
+        "check-tokens": { "scanRoots": ["design-b"] },
+        "check-icons": {
+          "scanRoots": ["design-b"],
+          "registrySources": [],
+          "ignore": []
+        },
+        "check-orphan-css": {
+          "cssRoots": ["design-b"],
+          "usageRoots": ["design-b"],
+          "skipDirs": ["node_modules"]
+        },
+        "check-manifest": {
+          "manifestDir": "docs/design-spec/manifests",
+          "schemaPath": "docs/design-spec/screen-manifest.schema.json",
+          "screensListPath": "docs/design-spec/screens.txt",
+          "sourceManifestDir": "design-b/docs/manifests",
+          "sourceManifestSuffix": ".manifest.json"
+        },
+        "check-deviation": {
+          "implRoots": ["impl-b"],
+          "ledgerPath": "docs/design-spec/DEVIATION-LEDGER.md",
+          "manifestDir": "docs/design-spec/manifests"
+        }
+      }
+    }
+  }
+}

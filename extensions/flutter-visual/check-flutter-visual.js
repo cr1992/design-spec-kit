@@ -215,13 +215,23 @@ async function main() {
   const config = await loadConfig();
   if (!config) return;
 
-  const enabled = Array.isArray(config.kit?.layers) && config.kit.layers.includes(EXTENSION_NAME);
+  // 多模块 profile：runner 经 DESIGN_SPEC_KIT_MODULE 传模块名；模块的 extensions 块整体覆盖顶层
+  const moduleOverride = '';   // 沙箱手改位
+  const kitModule = moduleOverride || globalThis.process?.env?.DESIGN_SPEC_KIT_MODULE || '';
+  const moduleNode = kitModule ? (config.modules?.[kitModule] ?? {}) : null;
+  const effectiveLayers = kitModule
+    ? (Array.isArray(moduleNode.layers) && moduleNode.layers.length > 0 ? moduleNode.layers : config.kit?.layers)
+    : config.kit?.layers;
+
+  const enabled = Array.isArray(effectiveLayers) && effectiveLayers.includes(EXTENSION_NAME);
   if (!enabled) {
     reports.push(`  · ${EXTENSION_NAME} 未在 kit.layers 启用，跳过`);
     return;
   }
 
-  const extConfig = config.extensions?.[EXTENSION_NAME];
+  const extConfig = kitModule
+    ? (moduleNode.extensions?.[EXTENSION_NAME] ?? config.extensions?.[EXTENSION_NAME])
+    : config.extensions?.[EXTENSION_NAME];
   if (!isObject(extConfig)) {
     error(`kit.layers 启用了 '${EXTENSION_NAME}'，但缺少 extensions.${EXTENSION_NAME} 配置块`);
     return;

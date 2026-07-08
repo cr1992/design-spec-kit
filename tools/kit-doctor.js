@@ -112,7 +112,24 @@ async function readInstalledLayers() {
 const layerInfo = IS_SOURCE
   ? { layers: [...Object.keys(LAYER_GUARDS), ...Object.keys(KNOWN_EXTENSIONS)], from: '源仓模式（全部层 + known extension）' }
   : await readInstalledLayers();
-const RAW_INSTALLED_LAYERS = layerInfo.layers;
+
+// ── 多模块 profile（MULTI-MODULE-PROPOSAL 方案 1）──────────────────
+// modules 分节存在 → ①在位/⑤对账按跨模块 effective layers 并集体检，②探针逐模块展开；
+// 不存在 → 单匿名默认模块，v2.1 行为不变。
+const MODULES_CONFIG = !IS_SOURCE && PROJECT_CONFIG.modules && typeof PROJECT_CONFIG.modules === 'object' && !Array.isArray(PROJECT_CONFIG.modules)
+  ? PROJECT_CONFIG.modules : null;
+// 空 modules 分节 = run-checks 按模块规划后啥也不跑（false green）——doctor 同步报 FAIL；
+// 体检其余部分按单模块视角继续，输出仍有参考价值。
+if (MODULES_CONFIG && Object.keys(MODULES_CONFIG).length === 0) {
+  fail(`${PROJECT_CONFIG_PATH} 的 modules 分节为空 —— run-checks 按模块规划后没有任何 guard 会跑（false green）；声明至少一个模块，或删除 modules 分节回到单模块模式`);
+}
+const MODULE_PLANS = MODULES_CONFIG && Object.keys(MODULES_CONFIG).length > 0
+  ? Object.entries(MODULES_CONFIG).map(([name, mod]) => ({
+      name,
+      layers: Array.isArray(mod?.layers) && mod.layers.length > 0 ? mod.layers : layerInfo.layers,
+    }))
+  : [{ name: null, layers: layerInfo.layers }];
+const RAW_INSTALLED_LAYERS = [...new Set(MODULE_PLANS.flatMap((m) => m.layers))];
 const UNKNOWN_LAYER_NAMES = RAW_INSTALLED_LAYERS.filter((name) => !isKnownLayer(name) && !isKnownExtension(name));
 const INSTALLED_LAYERS = RAW_INSTALLED_LAYERS.filter(isKnownLayer);
 const INSTALLED_EXTENSIONS = RAW_INSTALLED_LAYERS.filter(isKnownExtension);
@@ -175,9 +192,12 @@ const PROBES = [
     note: '空数组 = 关闭同形重画维；check-icons 仍会跑同名异形扫描' },
 ];
 
-function guardConfig(guardFile) {
+function guardConfig(guardFile, moduleName) {
   const name = guardFile.replace(/\.js$/, '');
-  return PROJECT_CONFIG.guards?.[name] || PROJECT_CONFIG.guards?.[guardFile] || {};
+  const pick = (node) => node?.guards?.[name] || node?.guards?.[guardFile] || {};
+  if (!moduleName) return pick(PROJECT_CONFIG);
+  // 与 guard 内合并规则一致：key 级浅合并，模块键覆盖顶层公共缺省
+  return { ...pick(PROJECT_CONFIG), ...pick(MODULES_CONFIG?.[moduleName]) };
 }
 
 function isKnownCheckCommand(command) {
@@ -187,41 +207,45 @@ function isKnownCheckCommand(command) {
 
 async function checkConfigProbes() {
   const report = [];
-  for (const probe of PROBES) {
-    const src = await readIfExists(path.join(SELF_DIR, probe.guard));
-    if (src == null) continue; // 该 guard 未装，②不体检未装的文件（①已经报过缺失）
-    if (!ENABLED_GUARDS.has(probe.guard)) {
-      const layer = GUARD_LAYER.get(probe.guard) || 'custom';
-      report.push(`  · ${probe.guard} 未启用（属层 ${layer}），跳过配置探针`);
-      continue;
-    }
-    const sourceItems = extractArrayConst(src, probe.const);
-    const configuredItems = guardConfig(probe.guard)[probe.key];
-    const items = Array.isArray(configuredItems) ? configuredItems : sourceItems;
-    const itemSource = Array.isArray(configuredItems) ? PROJECT_CONFIG_PATH : 'guard 源码默认值';
-    if (items == null) {
-      report.push(`  ? ${probe.guard} 的 ${probe.const} 未能从源码抽出，也没有在 ${PROJECT_CONFIG_PATH} 配 ${probe.key}（跳过）`);
-      continue;
-    }
-    if (items.length === 0) {
-      if (probe.optionalEmpty) {
-        report.push(`  · ${probe.guard}  ${probe.const}=[]（${probe.note}）`);
+  for (const mp of MODULE_PLANS) {
+    const tag = mp.name ? `${mp.name}/` : '';
+    const moduleEnabledGuards = new Set(mp.layers.filter(isKnownLayer).flatMap((l) => LAYER_GUARDS[l] || []));
+    for (const probe of PROBES) {
+      const src = await readIfExists(path.join(SELF_DIR, probe.guard));
+      if (src == null) continue; // 该 guard 未装，②不体检未装的文件（①已经报过缺失）
+      if (!moduleEnabledGuards.has(probe.guard)) {
+        const layer = GUARD_LAYER.get(probe.guard) || 'custom';
+        report.push(`  · ${tag}${probe.guard} 未启用（属层 ${layer}），跳过配置探针`);
         continue;
       }
-      fail(`${probe.guard} 的 ${probe.const} 是空数组 —— 配置区未按项目改，等于该维度不查`);
-      report.push(`  ✗ ${probe.guard}  ${probe.const}=[] 空`);
-      continue;
-    }
-    let hitCount = 0;
-    for (const item of items) {
-      const ok = probe.kind === 'dirlist' ? await dirNonEmpty(item) : await fileReadable(item);
-      if (ok) hitCount++;
-    }
-    if (hitCount === 0) {
-      fail(`${probe.guard} 的 ${probe.const}=[${items.join(', ')}] 在当前项目全部零命中（目录不存在/为空或文件不可读）—— 配置命中探针失败，等于装了没适配`);
-      report.push(`  ✗ ${probe.guard}  ${probe.const} 零命中：${items.join(', ')}`);
-    } else {
-      report.push(`  ✓ ${probe.guard}  ${probe.const} 命中 ${hitCount}/${items.length}：${items.join(', ')}（${itemSource}）`);
+      const sourceItems = extractArrayConst(src, probe.const);
+      const configuredItems = guardConfig(probe.guard, mp.name)[probe.key];
+      const items = Array.isArray(configuredItems) ? configuredItems : sourceItems;
+      const itemSource = Array.isArray(configuredItems) ? PROJECT_CONFIG_PATH : 'guard 源码默认值';
+      if (items == null) {
+        report.push(`  ? ${tag}${probe.guard} 的 ${probe.const} 未能从源码抽出，也没有在 ${PROJECT_CONFIG_PATH} 配 ${probe.key}（跳过）`);
+        continue;
+      }
+      if (items.length === 0) {
+        if (probe.optionalEmpty) {
+          report.push(`  · ${tag}${probe.guard}  ${probe.const}=[]（${probe.note}）`);
+          continue;
+        }
+        fail(`${tag}${probe.guard} 的 ${probe.const} 是空数组 —— 配置区未按项目改，等于该维度不查`);
+        report.push(`  ✗ ${tag}${probe.guard}  ${probe.const}=[] 空`);
+        continue;
+      }
+      let hitCount = 0;
+      for (const item of items) {
+        const ok = probe.kind === 'dirlist' ? await dirNonEmpty(item) : await fileReadable(item);
+        if (ok) hitCount++;
+      }
+      if (hitCount === 0) {
+        fail(`${tag}${probe.guard} 的 ${probe.const}=[${items.join(', ')}] 在当前项目全部零命中（目录不存在/为空或文件不可读）—— 配置命中探针失败，等于装了没适配`);
+        report.push(`  ✗ ${tag}${probe.guard}  ${probe.const} 零命中：${items.join(', ')}`);
+      } else {
+        report.push(`  ✓ ${tag}${probe.guard}  ${probe.const} 命中 ${hitCount}/${items.length}：${items.join(', ')}（${itemSource}）`);
+      }
     }
   }
   return report;

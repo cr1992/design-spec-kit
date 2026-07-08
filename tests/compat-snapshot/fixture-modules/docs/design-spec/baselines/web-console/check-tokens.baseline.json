@@ -1,0 +1,7 @@
+{
+  "note": "已认证保留的 token 违规清单（按出现次数计）。同 key 再新增一处也算新增，需修代码或显式加到这里。",
+  "generatedAt": "2026-07-08",
+  "reason": "first run",
+  "totalEntries": 0,
+  "files": {}
+}

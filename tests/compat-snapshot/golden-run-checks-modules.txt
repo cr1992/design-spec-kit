@@ -1,0 +1,85 @@
+聚合入口：模块 [mobile-app, web-console] · 串跑 10 个 guard
+  · mobile-app: layers [base]
+  · web-console: layers [base, handoff]
+  · 跳过 mobile-app/check-deviation.js（未启用层 'handoff'）
+  · 跳过 mobile-app/check-i18n.js（未启用层 'i18n'）
+  · 跳过 mobile-app/check-manifest.js（未启用层 'handoff'）
+  · 跳过 web-console/check-i18n.js（未启用层 'i18n'）
+
+── mobile-app/check-changelog.js ──────────────────────────────
+[mobile-app/check-changelog] scanned docs/design-spec/CHANGELOG.md · 14 行 · 2 条目 · 1 个日期段 · 索引标签 2
+[mobile-app/check-changelog] ✓ 同日合并：每个日期仅一段
+[mobile-app/check-changelog] ✓ 文件长度：14 行（≤ 200）
+[mobile-app/check-changelog] ✓ 条目深度：均 ≤ 3 子 bullet
+[mobile-app/check-changelog] ✓ 模块索引一致性：条目标签 ⊆ 索引，且索引无零使用项
+
+[mobile-app/check-changelog] RESULT: PASS
+── mobile-app/check-icons.js ──────────────────────────────
+[mobile-app/check-icons] scanned 2 files · 2 icon names · 2 defs · drift 0 · shared(dup) 0
+
+[mobile-app/check-icons] RESULT: PASS
+── mobile-app/check-orphan-css.js ──────────────────────────────
+[mobile-app/check-orphan-css] css defs: 6 classes (2 files) · usage面: 2 files · orphans: 1
+[mobile-app/check-orphan-css] baseline: 1 entries · removed: 0 · new: 0
+[mobile-app/check-orphan-css] ✓ check-orphan-css: 0 新增 · 0 减少 · baseline 保持不变
+
+[mobile-app/check-orphan-css] RESULT: PASS
+── mobile-app/check-tokens.js ──────────────────────────────
+[mobile-app/check-tokens] scanned 3 files · 4 violations
+[mobile-app/check-tokens] baseline: 4 entries · removed: 0 · new: 0
+[mobile-app/check-tokens] ✓ check-tokens: 0 新增 · 0 减少 · baseline 保持不变
+
+[mobile-app/check-tokens] RESULT: PASS
+── web-console/check-changelog.js ──────────────────────────────
+[web-console/check-changelog] scanned docs/design-spec/CHANGELOG.md · 14 行 · 2 条目 · 1 个日期段 · 索引标签 2
+[web-console/check-changelog] ✓ 同日合并：每个日期仅一段
+[web-console/check-changelog] ✓ 文件长度：14 行（≤ 200）
+[web-console/check-changelog] ✓ 条目深度：均 ≤ 3 子 bullet
+[web-console/check-changelog] ✓ 模块索引一致性：条目标签 ⊆ 索引，且索引无零使用项
+
+[web-console/check-changelog] RESULT: PASS
+── web-console/check-deviation.js ──────────────────────────────
+[web-console/check-deviation] scanned 1 files · 1 markers · ledger 1 rows · gaps 0
+
+[web-console/check-deviation] ℹ 待裁决队列（manifest 1 份）：delegated open 1 · contract_ref=TBD 0（随迭代评审收敛，非 FAIL）
+
+[web-console/check-deviation] ✓ check-deviation: 代码标记 ↔ 台账双向、台账 ↔ manifest 屏引用全部对齐，无缺口
+
+[web-console/check-deviation] RESULT: PASS
+── web-console/check-icons.js ──────────────────────────────
+[web-console/check-icons] scanned 1 files · 0 icon names · 0 defs · drift 0 · shared(dup) 0
+
+[web-console/check-icons] RESULT: PASS
+── web-console/check-manifest.js ──────────────────────────────
+[web-console/check-manifest] scanned 1 manifest · schema=docs/design-spec/screen-manifest.schema.json · errors 0 · warnings 0
+[web-console/check-manifest]   ✓ console-home.manifest.generated.json
+
+[web-console/check-manifest] ✓ check-manifest: 全部生成物过 schema + 语义规则
+
+[web-console/check-manifest] RESULT: PASS
+── web-console/check-orphan-css.js ──────────────────────────────
+[web-console/check-orphan-css] css defs: 3 classes (1 files) · usage面: 1 files · orphans: 1
+[web-console/check-orphan-css] baseline: 1 entries · removed: 0 · new: 0
+[web-console/check-orphan-css] ✓ check-orphan-css: 0 新增 · 0 减少 · baseline 保持不变
+
+[web-console/check-orphan-css] RESULT: PASS
+── web-console/check-tokens.js ──────────────────────────────
+[web-console/check-tokens] scanned 2 files · 0 violations
+[web-console/check-tokens] baseline: 0 entries · removed: 0 · new: 0
+[web-console/check-tokens] ✓ check-tokens: 0 新增 · 0 减少 · baseline 保持不变
+
+[web-console/check-tokens] RESULT: PASS
+
+════════ 汇总 ════════
+  ✓ mobile-app/check-changelog  exit=0  RESULT: PASS
+  ✓ mobile-app/check-icons  exit=0  RESULT: PASS
+  ✓ mobile-app/check-orphan-css  exit=0  RESULT: PASS
+  ✓ mobile-app/check-tokens  exit=0  RESULT: PASS
+  ✓ web-console/check-changelog  exit=0  RESULT: PASS
+  ✓ web-console/check-deviation  exit=0  RESULT: PASS
+  ✓ web-console/check-icons  exit=0  RESULT: PASS
+  ✓ web-console/check-manifest  exit=0  RESULT: PASS
+  ✓ web-console/check-orphan-css  exit=0  RESULT: PASS
+  ✓ web-console/check-tokens  exit=0  RESULT: PASS
+
+RESULT: PASS

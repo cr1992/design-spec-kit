@@ -39,7 +39,13 @@ async function readDesignSpecConfig() {
   catch { return {}; }
 }
 const DESIGN_SPEC_CONFIG = await readDesignSpecConfig();
-const GUARD_CONFIG = DESIGN_SPEC_CONFIG.guards?.['check-icons'] || DESIGN_SPEC_CONFIG.guards?.['check-icons.js'] || {};
+// ── 多模块 profile（MULTI-MODULE-PROPOSAL 方案 1）：runner 经 DESIGN_SPEC_KIT_MODULE 传模块名 ──
+const moduleOverride = '';   // 沙箱手改位：无 shell 粘贴执行时手填模块名
+const KIT_MODULE = moduleOverride || globalThis.process?.env?.DESIGN_SPEC_KIT_MODULE || '';
+const pickGuardCfg = (node) => node?.guards?.['check-icons'] || node?.guards?.['check-icons.js'] || {};
+const MODULE_GUARD_CONFIG = KIT_MODULE ? pickGuardCfg(DESIGN_SPEC_CONFIG.modules?.[KIT_MODULE]) : {};
+// key 级浅合并：模块键覆盖顶层公共缺省（数组整键替换，不做深合并）
+const GUARD_CONFIG = KIT_MODULE ? { ...pickGuardCfg(DESIGN_SPEC_CONFIG), ...MODULE_GUARD_CONFIG } : pickGuardCfg(DESIGN_SPEC_CONFIG);
 const cfgArray = (key, fallback) => Array.isArray(GUARD_CONFIG[key]) ? GUARD_CONFIG[key] : fallback;
 const cfgValue = (key, fallback) => Object.prototype.hasOwnProperty.call(GUARD_CONFIG, key) ? GUARD_CONFIG[key] : fallback;
 
@@ -63,7 +69,22 @@ const DEF_PATTERNS = [
   /([a-zA-Z][\w-]*)\s*:\s*\{\s*s\s*:\s*[\d.]+\s*,\s*p\s*:\s*'([^']*)'\s*\}/g, // name: { s: <n>, p: '<path .../>' }  对象式（按项目启用）
 ];
 
-const BASELINE_PATH = cfgValue('baselinePath', 'tools/check-icons.baseline.json');
+// 模块模式 baseline 强制分账：不继承顶层 baselinePath（两模块混一本账 = 债无归属）
+const BASELINE_PATH = KIT_MODULE
+  ? (MODULE_GUARD_CONFIG.baselinePath || `docs/design-spec/baselines/${KIT_MODULE}/check-icons.baseline.json`)
+  : cfgValue('baselinePath', 'tools/check-icons.baseline.json');
+// 迁移防线：模块 baseline 缺失而旧全局 baseline 仍在 → FAIL，拒绝静默重建空债 baseline（= 历史债清零）
+if (KIT_MODULE && !MODULE_GUARD_CONFIG.baselinePath) {
+  const legacyBaseline = pickGuardCfg(DESIGN_SPEC_CONFIG).baselinePath || 'tools/check-icons.baseline.json';
+  const fileExists = async (p) => { try { await readFile(p); return true; } catch { return false; } };
+  if (!(await fileExists(BASELINE_PATH)) && (await fileExists(legacyBaseline))) {
+    log(`✗ 模块 '${KIT_MODULE}' 无 baseline（${BASELINE_PATH}），但旧全局 baseline 仍在（${legacyBaseline}）`);
+    log(`  多模块迁移须显式搬移该文件，或在 modules.${KIT_MODULE}.guards['check-icons'] 配 baselinePath`);
+    log('RESULT: FAIL');
+    if (globalThis.__NODE__) globalThis.process.exit(1);
+    throw new Error('baseline migration required');
+  }
+}
 
 const EFFECTIVE_ARGS = args.length ? args : (globalThis.__NODE__ ? process.argv.slice(2) : []);
 
