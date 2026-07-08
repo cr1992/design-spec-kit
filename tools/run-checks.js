@@ -25,6 +25,8 @@
  *   node tools/run-checks.js --execute-impl  透传给 extension guard
  *   node tools/run-checks.js --only check-tokens   只跑一个（无视 core 层开关；带不带 .js 都行）
  *   node tools/run-checks.js --all        无视 core 层开关跑全部 tools/ guard
+ *   node tools/run-checks.js --json       抑制文本，输出单行稳定 JSON 汇总（jsonVersion 承诺字段稳定；
+ *                                         文本汇总不作为解析面）；exit 语义与文本模式一致
  * ═════════════════════════════════════════════════════════════*/
 
 import { readFile, readdir } from 'node:fs/promises';
@@ -35,6 +37,24 @@ import { DEFAULT_INSTALLED_LAYERS, KNOWN_EXTENSIONS, LAYER_GUARDS, isKnownExtens
 
 // ─── 配置 ──────────────────────────────────────────────────────
 const args = [];   // 沙箱手改位（本文件 node-only，一般留空，走 process.argv）
+const EFFECTIVE_ARGS = args.length ? args : process.argv.slice(2);
+// --json 是全路径契约：planning / config 失败的早退分支也必须输出 JSON，不能漏文本
+const JSON_MODE = EFFECTIVE_ARGS.includes('--json');
+
+// 统一失败出口：文本模式打原有行 + RESULT: FAIL；JSON 模式输出稳定单行 JSON（errors[] 承载原因）
+function emitFailureAndExit(errorLines, { modules = null } = {}) {
+  if (JSON_MODE) {
+    console.log(JSON.stringify({
+      jsonVersion: 1, modules, guards: [], missing: [], unknownLayers: [],
+      errors: errorLines.map((l) => l.replace(/^[✗\s]+/, '')),
+      result: 'FAIL',
+    }));
+  } else {
+    for (const line of errorLines) console.log(line);
+    console.log('RESULT: FAIL');
+  }
+  process.exit(1);
+}
 
 async function readProjectConfig() {
   try { return JSON.parse(await readFile('docs/design-spec/config.json', 'utf8')); }
@@ -55,10 +75,10 @@ const MODULES_CONFIG = PROJECT_CONFIG.modules && typeof PROJECT_CONFIG.modules =
   ? PROJECT_CONFIG.modules : null;
 // 空 modules 分节 = 所有 guard 都不跑的 false green，直接 FAIL（要么声明模块，要么删分节回单模块模式）
 if (MODULES_CONFIG && Object.keys(MODULES_CONFIG).length === 0) {
-  console.log('✗ docs/design-spec/config.json 的 modules 分节为空 —— 按模块规划后没有任何 guard 会跑（false green）');
-  console.log('  修法：在 modules 下声明至少一个模块，或删除 modules 分节回到单模块模式');
-  console.log('RESULT: FAIL');
-  process.exit(1);
+  emitFailureAndExit([
+    '✗ docs/design-spec/config.json 的 modules 分节为空 —— 按模块规划后没有任何 guard 会跑（false green）',
+    '  修法：在 modules 下声明至少一个模块，或删除 modules 分节回到单模块模式',
+  ]);
 }
 // [{ name: 'mobile-app'|null, layers: [...] }]；name=null = 匿名默认模块（旧行为）
 const MODULE_PLANS = MODULES_CONFIG
@@ -104,9 +124,8 @@ const CUSTOM_GUARDS = [];
     }
   }
   if (errors.length > 0) {
-    for (const e of errors) console.log(`✗ ${e}（docs/design-spec/config.json）`);
-    console.log('RESULT: FAIL');
-    process.exit(1);
+    emitFailureAndExit(errors.map((e) => `✗ ${e}（docs/design-spec/config.json）`),
+      { modules: MODULES_CONFIG ? Object.keys(MODULES_CONFIG) : null });
   }
 }
 
@@ -121,7 +140,6 @@ const UNKNOWN_LAYER_NAMES = [...new Set(MODULE_PLANS.flatMap((m) => layerSplit(m
 const GUARD_PATTERN = /^check-.+\.js$/i;          // guard 文件命名约定
 const EXCLUDE = new Set([]);                       // 需要排除的具体文件名（留空即可）
 
-const EFFECTIVE_ARGS = args.length ? args : process.argv.slice(2);
 
 // ─── 定位 guard 目录 = 本脚本自身所在目录 ───────────────────────
 const SELF_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -164,10 +182,11 @@ async function discoverEnabledExtensions(extensionNames) {
 }
 
 function parseFlags(argv) {
-  const flags = { list: false, only: null, all: false, strict: false, executeImpl: false };
+  const flags = { list: false, only: null, all: false, strict: false, executeImpl: false, json: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--list') flags.list = true;
+    else if (a === '--json') flags.json = true;
     else if (a === '--all') flags.all = true;
     else if (a === '--strict') flags.strict = true;
     else if (a === '--execute-impl') flags.executeImpl = true;
@@ -279,9 +298,8 @@ for (const g of autoDiscovered) {
   const base = normalizeGuardName(g);
   const clash = CUSTOM_GUARDS.find((c) => c.name === base || c.name === base.replace(/^check-/, ''));
   if (clash) {
-    console.log(`✗ tools/${g}（auto-discovery）与 customGuards['${clash.name}'] 撞名 —— 会双跑同一检查；删除该文件或改 customGuards name`);
-    console.log('RESULT: FAIL');
-    process.exit(1);
+    emitFailureAndExit([`✗ tools/${g}（auto-discovery）与 customGuards['${clash.name}'] 撞名 —— 会双跑同一检查；删除该文件或改 customGuards name`],
+      { modules: MODULES_CONFIG ? Object.keys(MODULES_CONFIG) : null });
   }
 }
 const modTag = (name) => (name ? `${name}/` : '');
@@ -304,17 +322,17 @@ function printModuleLayers() {
 }
 
 if (presentCore.length === 0) {
-  console.log(`✗ ${SELF_DIR} 下没找到任何 check-*.js —— 至少应装 guard①（check-tokens.js）`);
-  console.log(`修法：确认已把 tools/ 下的 guard 文件从 kit 拷入本项目`);
-  console.log('RESULT: FAIL');
-  process.exitCode = 1;
+  emitFailureAndExit([
+    `✗ ${SELF_DIR} 下没找到任何 check-*.js —— 至少应装 guard①（check-tokens.js）`,
+    `修法：确认已把 tools/ 下的 guard 文件从 kit 拷入本项目`,
+  ], { modules: MODULES_CONFIG ? Object.keys(MODULES_CONFIG) : null });
 } else {
   if (flags.only) {
     const matched = checks.filter((check) => matchesOnly(check, flags.only));   // --only 无视 core 层开关；extension 仍须 opt-in
     if (matched.length === 0) {
-      console.log(`✗ --only ${flags.only} 未匹配到任何已发现 guard（core 存在：${presentCore.map(normalizeGuardName).join(', ')}；enabled extensions：${[...new Set(resolvedModules.flatMap((m) => layerSplit(m.layers).extensions))].join(', ') || '无'}）`);
-      console.log('RESULT: FAIL');
-      process.exit(1);   // 立即结束：不落进空 checks 分支重复打印 RESULT（末行 RESULT 是判读约定）
+      // 立即结束：不落进空 checks 分支重复打印 RESULT（末行 RESULT 是判读约定）
+      emitFailureAndExit([`✗ --only ${flags.only} 未匹配到任何已发现 guard（core 存在：${presentCore.map(normalizeGuardName).join(', ')}；enabled extensions：${[...new Set(resolvedModules.flatMap((m) => layerSplit(m.layers).extensions))].join(', ') || '无'}）`],
+        { modules: MODULES_CONFIG ? Object.keys(MODULES_CONFIG) : null });
     } else {
       checks = matched;
       coreSkipped.length = 0; coreMissing.length = 0;
@@ -346,32 +364,38 @@ if (presentCore.length === 0) {
     console.log(missingIsFail || unknownIsFail ? 'RESULT: FAIL' : 'RESULT: PASS');
     if (missingIsFail || unknownIsFail) process.exitCode = 1;
   } else if (checks.length > 0) {
-    console.log(`聚合入口：${headerLabel()}${flags.all ? '（--all）' : ''}${flags.executeImpl ? '（--execute-impl）' : ''} · 串跑 ${checks.length} 个 guard`);
-    printModuleLayers();
-    for (const s of coreSkipped) console.log(`  · 跳过 ${modTag(s.module)}${s.file}（未启用层 '${s.layer}'）`);
+    // --json：抑制全部文本叙述，末尾输出单个稳定 JSON 文档（机读汇总契约，jsonVersion 承诺字段稳定；
+    // 文本汇总不作为解析面）。exit 语义与文本模式一致。
+    const say = (...a) => { if (!flags.json) console.log(...a); };
+    say(`聚合入口：${headerLabel()}${flags.all ? '（--all）' : ''}${flags.executeImpl ? '（--execute-impl）' : ''} · 串跑 ${checks.length} 个 guard`);
+    if (!flags.json) printModuleLayers();
+    for (const s of coreSkipped) say(`  · 跳过 ${modTag(s.module)}${s.file}（未启用层 '${s.layer}'）`);
     for (const plan of allExtensionPlans) {
       if (plan.status === 'missing-dir') {
         const mark = flags.strict ? '✗' : '·';
         const label = flags.strict ? 'extension' : '跳过 extension';
         const strictHint = flags.strict ? '；--strict 要求已启用 extension 必须已安装' : '';
-        console.log(`  ${mark} ${label} '${modTag(plan.module)}${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
+        say(`  ${mark} ${label} '${modTag(plan.module)}${plan.name}'（${plan.dir} 不存在；安装 extension 或从 kit.layers 移除${strictHint}）`);
       }
     }
-    for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ⚠ 未知 layer / extension '${name}'（kit-doctor 会提示拼写；run-checks --strict 会失败）`);
-    for (const g of autoDiscovered) console.log(`  ⚠ tools/${g} 不在任何层清单——auto-discovery 弃用中（≥2 个 minor 后移除），迁移到 config.customGuards`);
-    console.log('');
+    for (const name of UNKNOWN_LAYER_NAMES) say(`  ⚠ 未知 layer / extension '${name}'（kit-doctor 会提示拼写；run-checks --strict 会失败）`);
+    for (const g of autoDiscovered) say(`  ⚠ tools/${g} 不在任何层清单——auto-discovery 弃用中（≥2 个 minor 后移除），迁移到 config.customGuards`);
+    say('');
     const results = [];
     for (const check of checks) {
-      console.log(`── ${check.label} ──────────────────────────────`);
+      say(`── ${check.label} ──────────────────────────────`);
       const r = await runOne(check, flags);
-      const prefix = `[${summaryName(check)}] `;
-      const prefixed = r.out.split('\n').map(l => l ? `${prefix}${l}` : l).join('\n');
-      process.stdout.write(prefixed.endsWith('\n') ? prefixed : prefixed + '\n');
+      if (!flags.json) {
+        const prefix = `[${summaryName(check)}] `;
+        const prefixed = r.out.split('\n').map(l => l ? `${prefix}${l}` : l).join('\n');
+        process.stdout.write(prefixed.endsWith('\n') ? prefixed : prefixed + '\n');
+      }
       results.push({ ...r, resultLine: lastResultLine(r.out) });
     }
 
-    console.log('\n════════ 汇总 ════════');
+    say('\n════════ 汇总 ════════');
     let anyFail = false;
+    const guardRows = [];
     for (const r of results) {
       // custom guard 判定契约：exit != 0 永远 FAIL；RESULT: FAIL 可否决零退出码；
       // 无 RESULT 行按 exit code（内置 guard 仍要求必须打 RESULT）。
@@ -379,23 +403,33 @@ if (presentCore.length === 0) {
       const verdict = r.resultLine || (isCustom ? `(无 RESULT 行，按退出码判定)` : `(未打印 RESULT，退出码 ${r.code})`);
       const failed = r.code !== 0 || (r.resultLine && r.resultLine.includes('FAIL')) || (!isCustom && !r.resultLine);
       if (failed) anyFail = true;
-      console.log(`  ${failed ? '✗' : '✓'} ${summaryName(r.check)}  exit=${r.code}  ${verdict}`);
+      guardRows.push({
+        module: r.check.module, guard: normalizeGuardName(r.check.file), kind: r.check.kind,
+        exit: r.code, result: r.resultLine ? (r.resultLine.includes('FAIL') ? 'FAIL' : 'PASS') : null, failed,
+      });
+      say(`  ${failed ? '✗' : '✓'} ${summaryName(r.check)}  exit=${r.code}  ${verdict}`);
     }
+    const missingRows = [];
     for (const m of coreMissing) {
       anyFail = true;
-      console.log(`  ✗ ${modTag(m.module)}${normalizeGuardName(m.file)}  缺失（启用层期望但文件不在 tools/——从 kit 拷入，或在 config 里关掉该层）`);
+      missingRows.push(`${modTag(m.module)}${normalizeGuardName(m.file)}`);
+      say(`  ✗ ${modTag(m.module)}${normalizeGuardName(m.file)}  缺失（启用层期望但文件不在 tools/——从 kit 拷入，或在 config 里关掉该层）`);
     }
     for (const m of extensionMissingGuards) {
       anyFail = true;
-      console.log(`  ✗ ${modTag(m.module)}${m.extension}/${normalizeGuardName(m.file)}  缺失（extension 目录不完整）`);
+      missingRows.push(`${modTag(m.module)}${m.extension}/${normalizeGuardName(m.file)}`);
+      say(`  ✗ ${modTag(m.module)}${m.extension}/${normalizeGuardName(m.file)}  缺失（extension 目录不完整）`);
     }
     if (missingExtensionDirIsFail) {
       anyFail = true;
-      for (const plan of missingExtensionDirs) console.log(`  ✗ ${modTag(plan.module)}${plan.name}  已启用但 extension 目录不存在（${plan.dir}）`);
+      for (const plan of missingExtensionDirs) {
+        missingRows.push(`${modTag(plan.module)}${plan.name}`);
+        say(`  ✗ ${modTag(plan.module)}${plan.name}  已启用但 extension 目录不存在（${plan.dir}）`);
+      }
     }
     if (unknownIsFail) {
       anyFail = true;
-      for (const name of UNKNOWN_LAYER_NAMES) console.log(`  ✗ ${name}  未知 layer / extension`);
+      for (const name of UNKNOWN_LAYER_NAMES) say(`  ✗ ${name}  未知 layer / extension`);
     }
 
     if (anyFail) {
@@ -403,11 +437,22 @@ if (presentCore.length === 0) {
       const hint = firstFailed
         ? (firstFailed.check.kind === 'custom' ? `\`${firstFailed.check.command}\`` : `\`${process.execPath} ${firstFailed.check.absPath}\``)
         : '`node tools/run-checks.js --list`';
-      console.log(`\n修法：上面标 ✗ 的逐个单跑 ${hint} 看详细违规再修`);
-      console.log('\nRESULT: FAIL');
+      say(`\n修法：上面标 ✗ 的逐个单跑 ${hint} 看详细违规再修`);
+      say('\nRESULT: FAIL');
       process.exitCode = 1;
     } else {
-      console.log('\nRESULT: PASS');
+      say('\nRESULT: PASS');
+    }
+    if (flags.json) {
+      console.log(JSON.stringify({
+        jsonVersion: 1,
+        modules: MODULES_CONFIG ? MODULE_PLANS.map((m) => m.name) : null,
+        guards: guardRows,
+        missing: missingRows,
+        unknownLayers: UNKNOWN_LAYER_NAMES,
+        errors: [],   // 主汇总固定带空 errors，与失败早退文档同构（首版契约字段稳定，消费方免 optional handling）
+        result: anyFail ? 'FAIL' : 'PASS',
+      }));
     }
   } else {
     for (const plan of allExtensionPlans) {

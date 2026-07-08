@@ -1,0 +1,11 @@
+{
+  "kit": { "layers": ["handoff"] },
+  "guards": {
+    "check-manifest": {
+      "manifestDir": "docs/design-spec/manifests",
+      "screensListPath": "docs/design-spec/screens.txt",
+      "sourceManifestDir": "design/docs/manifests",
+      "sourceManifestSuffix": ".manifest.json"
+    }
+  }
+}

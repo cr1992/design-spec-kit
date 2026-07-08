@@ -1,0 +1,2 @@
+--module 需要模块名参数（用法：--module <name>）
+RESULT: FAIL

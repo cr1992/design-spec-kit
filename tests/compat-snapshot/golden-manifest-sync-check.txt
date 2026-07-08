@@ -1,0 +1,2 @@
+manifest-sync（schema-projection-v1）校验通过：sample-screen
+RESULT: PASS

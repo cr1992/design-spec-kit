@@ -99,6 +99,35 @@ Submodule 在消费仓 CI 里有两个高频坑，接入时就处理掉：
 { "kit": { "layers": ["base", "handoff"] } }
 ```
 
+## 3.5 第二个模块怎么接（多模块 profile）
+
+第一个模块用单模块 config 即可；第二个设计模块进场时切到 `modules` 分节（详细规则见 `MULTI-MODULE-PROPOSAL.md`）：
+
+```json
+{
+  "kit": { "layers": ["base"] },
+  "guards": { "check-changelog": { "changelogPath": "docs/design-spec/CHANGELOG.md" } },
+  "modules": {
+    "mobile-app": {
+      "guards": { "check-tokens": { "scanRoots": ["ui-design/apps/<module-a>/pages"] } }
+    },
+    "web-console": {
+      "layers": ["base", "handoff"],
+      "guards": { "check-manifest": { "sourceManifestDir": "ui-design/apps/<module-b>/docs/manifests" } }
+    }
+  }
+}
+```
+
+迁移要点：
+
+- **顶层 `guards` 变成公共缺省**，模块内同名 guard 配置按 key 覆盖（数组整键替换）。模块可声明自己的 `layers` 子集。
+- **输出两态**：一旦有 `modules` 分节，所有 guard 输出与汇总一律带 `<module>/` 前缀；`--only` 支持 `<module>/<guard>` 限定。空 `modules: {}` 会直接 FAIL。
+- **baseline 必须搬家分账**：模块模式不继承顶层 `baselinePath`，缺省路径为 `docs/design-spec/baselines/<module>/<guard>.baseline.json`。旧全局 baseline 还在而模块 baseline 缺失时 guard 会 FAIL 并给迁移指令——按指令 `mv` 过去，**不要**删掉重跑（那等于历史债静默清零）。每份 baseline 的处置口径（冻结 / 清偿 + owner）按模块声明。
+- **已硬化的自建检查不迁移**：用 `customGuards[]` 登记进同一 runner（modules 分节存在时每条必须声明 `module`）。
+- **manifest 同步**：设计源 manifest → generated 用 `node tools/design-spec-kit/tools/manifest-sync.js`（按模块读 `check-manifest.sourceManifestDir`；`--check` 挂 CI / commit gate；`--module <m>` 只处理一个模块）。消费仓不要自己维护同构脚本。
+- **机读汇总**：外部系统解析结果用 `run-checks.js --json`（`jsonVersion` 承诺字段稳定），不要解析文本汇总。
+
 ## 4. CI 接线
 
 **CI/commit gate 接线是落地必做步骤，不是可选项。** guard 的防漂移承诺 = baseline 只拦新增，前提是每次改动都有人跑；只靠人手动 `run-checks.js` 的项目，漂移会静默进主干，kit 等于没装。上线节奏建议：先报告制（`allow_failure: true` 或等价物）验证 CI 环境（submodule 拉取、Node 版本），连续两次与本地复跑一致后转硬。

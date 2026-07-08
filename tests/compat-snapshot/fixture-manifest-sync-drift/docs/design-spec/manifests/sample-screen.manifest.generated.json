@@ -1,0 +1,61 @@
+{
+  "screen": {
+    "id": "sample-screen",
+    "title": "Sample Screen",
+    "source": "design/pages/sample.html"
+  },
+  "version": 1,
+  "state_classes": {
+    "inherit": true
+  },
+  "interactions": [
+    {
+      "trigger": "sample-open-btn",
+      "action": "opens",
+      "target": "sample-panel"
+    }
+  ],
+  "elements": [
+    {
+      "anchor": "sample-open-btn",
+      "role": "打开面板按钮",
+      "copy_key": "sample.open"
+    },
+    {
+      "anchor": "sample-panel",
+      "role": "操作面板（深色玻璃，light/dark 主题不变）",
+      "states": [
+        "panel"
+      ],
+      "contracts": {
+        "surface": "dark-glass",
+        "themeInvariant": true,
+        "motion": {
+          "portrait": "slide-up",
+          "landscape": "slide-in-right"
+        }
+      }
+    }
+  ],
+  "states": {
+    "designed": [
+      {
+        "id": "default",
+        "note": "落地态"
+      },
+      {
+        "id": "panel",
+        "note": "面板展开态"
+      }
+    ],
+    "delegated": [
+      {
+        "state": "offline",
+        "to": "backend",
+        "contract_ref": "docs/sample-api.yaml",
+        "status": "open"
+      }
+    ]
+  },
+  "generator": "schema-projection-v1"
+}

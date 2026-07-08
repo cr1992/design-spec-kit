@@ -1,0 +1,4 @@
+manifest-sync 漂移：
+  - docs/design-spec/manifests/sample-screen.manifest.generated.json 未与 design/docs/manifests/sample-screen.manifest.json 同步
+修法：node tools/design-spec-kit/tools/manifest-sync.js 重生并提交
+RESULT: FAIL

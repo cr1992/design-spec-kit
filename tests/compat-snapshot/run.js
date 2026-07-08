@@ -41,6 +41,12 @@ const SCENARIOS = [
   { name: 'impl-visual --execute-impl 缺 evidence（负向）', dir: 'fixture-impl-visual-miss', args: ['--execute-impl'], expectExit: 1, golden: 'golden-run-checks-implvisual-miss.txt' },
   { name: 'impl-visual 单条 evidence 覆盖 matcher 的 reporter 要求（负向）', dir: 'fixture-impl-visual-badreporter', args: [], expectExit: 1, golden: 'golden-run-checks-implvisual-badreporter.txt' },
   { name: 'impl-visual config-only 拦非法 regex pattern（负向）', dir: 'fixture-impl-visual-badregex', args: [], expectExit: 1, golden: 'golden-run-checks-implvisual-badregex.txt' },
+  { name: 'run-checks --json 机读汇总（多模块）', dir: 'fixture-modules', args: ['--json'], expectExit: 0, golden: 'golden-run-checks-modules-json.txt' },
+  { name: 'manifest-sync --check 同步校验', dir: 'fixture-manifest-sync', tool: 'tools/manifest-sync.js', args: ['--check'], expectExit: 0, golden: 'golden-manifest-sync-check.txt' },
+  { name: 'manifest-sync --check 漂移（负向）', dir: 'fixture-manifest-sync-drift', tool: 'tools/manifest-sync.js', args: ['--check'], expectExit: 1, golden: 'golden-manifest-sync-drift.txt' },
+  { name: '--json 全路径：--only 未匹配走 JSON 失败（负向）', dir: 'fixture-modules', args: ['--json', '--only', 'nope/check-tokens'], expectExit: 1, golden: 'golden-run-checks-json-only-fail.txt' },
+  { name: '--json 全路径：config 失败走 JSON（负向）', dir: 'fixture-custom-no-module', args: ['--json'], expectExit: 1, golden: 'golden-run-checks-json-config-fail.txt' },
+  { name: 'manifest-sync --module 缺值 fail closed（负向）', dir: 'fixture-manifest-sync', tool: 'tools/manifest-sync.js', args: ['--check', '--module'], expectExit: 1, golden: 'golden-manifest-sync-module-missing.txt' },
 ];
 
 function fixturesDirty() {
@@ -61,7 +67,7 @@ let fail = false;
 
 for (const sc of SCENARIOS) {
   const goldenPath = path.join(SELF_DIR, sc.golden);
-  const r = spawnSync(process.execPath, [path.join(KIT_ROOT, 'tools', 'run-checks.js'), ...sc.args], {
+  const r = spawnSync(process.execPath, [path.join(KIT_ROOT, sc.tool ?? 'tools/run-checks.js'), ...sc.args], {
     cwd: path.join(SELF_DIR, sc.dir), encoding: 'utf8',
   });
   const actual = normalize((r.stdout ?? '') + (r.stderr ?? ''));
