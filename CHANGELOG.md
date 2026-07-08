@@ -3,7 +3,7 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
-## Unreleased
+## v2.2.0 — 2026-07-08
 
 - [工具] 落地 MULTI-MODULE-PROPOSAL 方案 4：新增 `tools/manifest-sync.js`（schema-owned canonicalization 上收）——delegated projection 裁剪、稳定 JSON 序列化、screens 清单生成、`--check` 逐字节漂移校验；多模块感知（按 modules.<m>.guards ⊕ 顶层合并读 check-manifest 配置，`--module <m>` 限定，缺值/单模块模式下带 --module 均 fail closed 不静默退化全量）；generated 追加 `generator: "schema-projection-v1"` 版本标记（schema 增可选 `generator` 字段），projection 演进走 kit 版本发布。消费仓同构脚本迁移后删除。
 - [工具] `run-checks.js --json`：抑制文本叙述，输出单行稳定 JSON 汇总（jsonVersion/modules/guards/missing/unknownLayers/errors/result，承诺字段稳定）；**全路径契约**——planning/config 失败的早退分支（空 modules、customGuards 配置错误、--only 未匹配、guard 文件缺失、auto-discovery 撞名）统一经 JSON 失败出口，不漏文本；文本汇总不作为解析面；exit 语义与文本模式一致。

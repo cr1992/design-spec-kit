@@ -1,4 +1,4 @@
-# design-spec-kit · 单文件分发包（One-File Bundle）· v2.1.0
+# design-spec-kit · 单文件分发包（One-File Bundle）· v2.2.0
 #
 # 用途：当目标项目只能「一个个上传文件」、没有 git 时，只上传/粘贴本文件这一个即可。
 #
@@ -2860,7 +2860,7 @@ String _componentSignature(double value) => value.toStringAsFixed(4);
 ⟦FILE design-spec-kit/package.json⟧
 {
   "name": "design-spec-kit",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "description": "设计纪律 + 还原交接套件（与平台无关）。guard 支持 node 直跑或无 shell 环境粘贴执行。",
@@ -6324,6 +6324,6 @@ if (presentCore.length === 0) {
 ⟦/FILE⟧
 
 ⟦FILE .design-spec-kit.version⟧
-2.1.0
+2.2.0
 ⟦/FILE⟧
 
