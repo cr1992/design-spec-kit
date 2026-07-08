@@ -8,6 +8,14 @@ export const LAYER_GUARDS = {
 };
 
 export const KNOWN_EXTENSIONS = {
+  // 通用实现栈视觉契约执行器（MULTI-MODULE-PROPOSAL 方案 3）：
+  // config-only 校验 + evidence runner + matcher 集（substring/regex/flutter-expanded/playwright-list）。
+  'impl-visual': {
+    dir: 'extensions/impl-visual',
+    guards: ['check-impl-visual.js'],
+  },
+  // impl-visual 的注册别名（弃用窗口 ≥2 个 minor）：kit.layers 'flutter-visual' 与
+  // extensions.flutter-visual 配置路径原样可用；guard 文件是薄转发壳（--as flutter-visual）。
   'flutter-visual': {
     dir: 'extensions/flutter-visual',
     guards: ['check-flutter-visual.js'],

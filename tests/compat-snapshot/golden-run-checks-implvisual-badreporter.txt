@@ -1,0 +1,28 @@
+聚合入口：启用层/扩展 [impl-visual] · 串跑 1 个 guard
+  · 跳过 check-changelog.js（未启用层 'base'）
+  · 跳过 check-deviation.js（未启用层 'handoff'）
+  · 跳过 check-i18n.js（未启用层 'i18n'）
+  · 跳过 check-icons.js（未启用层 'base'）
+  · 跳过 check-manifest.js（未启用层 'handoff'）
+  · 跳过 check-orphan-css.js（未启用层 'base'）
+  · 跳过 check-tokens.js（未启用层 'base'）
+
+── impl-visual/check-impl-visual.js ──────────────────────────────
+[check-impl-visual] impl-visual: errors 1 · warnings 0 · config-only
+[check-impl-visual]   ✓ sample-screen: anchors=2 contracts=1 interactions=1 evidence=2
+[check-impl-visual]   · config-only 模式：未执行 实现命令；需要实现核对时加 --execute-impl
+[check-impl-visual]   ✗ sample-screen: evidence 'panel motion' 的 matcher 'playwright-list' 要求 command 包含 --reporter=list，以便 --execute-impl 稳定核对 evidence
+
+[check-impl-visual] 修法：
+[check-impl-visual]   1. 在 docs/design-spec/config.json 中补齐 kit.layers 与 extensions.impl-visual.screens[]。
+[check-impl-visual]   2. 遵守默认 ValueKey(anchor)；只有旧 key 例外才写 anchors.<anchor>.byKey。
+[check-impl-visual]   3. evidence 写测试用例名（或 {name, match, pattern}），command 的 reporter 满足所选 matcher 要求。
+
+[check-impl-visual] RESULT: FAIL
+
+════════ 汇总 ════════
+  ✗ check-impl-visual  exit=1  RESULT: FAIL
+
+修法：上面标 ✗ 的逐个单跑 `<node> <kit>/extensions/impl-visual/check-impl-visual.js` 看详细违规再修
+
+RESULT: FAIL

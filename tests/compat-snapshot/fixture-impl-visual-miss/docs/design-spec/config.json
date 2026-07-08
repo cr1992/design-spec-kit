@@ -1,0 +1,29 @@
+{
+  "kit": {
+    "layers": [
+      "impl-visual"
+    ]
+  },
+  "extensions": {
+    "impl-visual": {
+      "screens": [
+        {
+          "id": "sample-screen",
+          "manifest": "docs/design-spec/manifests/sample-screen.manifest.generated.json",
+          "command": "node fake-playwright.js --reporter=list",
+          "matcher": "playwright-list",
+          "evidence": [
+            "sample panel uses dark glass surface in light and dark",
+            "sample panel opens with animated presentation",
+            {
+              "name": "panel motion timing",
+              "match": "regex",
+              "pattern": "animated presentation \\(\\d+ms\\)"
+            },
+            "sample panel closes with reverse motion"
+          ]
+        }
+      ]
+    }
+  }
+}

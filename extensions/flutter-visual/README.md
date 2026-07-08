@@ -1,5 +1,7 @@
 # flutter-visual extension
 
+> **别名状态**：`flutter-visual` 现在是通用扩展 `impl-visual` 的注册别名（弃用窗口 ≥2 个 minor）。层名、`extensions.flutter-visual` 配置路径、输出文案原样可用，缺省 matcher 为 `flutter-expanded`（= 原 `--reporter expanded` 行为）；guard 文件是转发壳。新接入请直接用 `impl-visual`，matcher 契约见 [`../impl-visual/README.md`](../impl-visual/README.md)。
+
 `flutter-visual` 是 `design-spec-kit` 的 Flutter 实现栈扩展。它不属于 core layer，不解析 Dart 源码，不知道业务文案或业务组件；只读取 manifest 的通用视觉契约，并调用项目自己声明的 Flutter test command。
 
 ## 启用
@@ -95,7 +97,7 @@ node tools/run-checks.js --execute-impl
 
 ## Helper 模板
 
-`helpers/flutter_visual_contract.dart` 是可复制模板，不是稳定 package API。推荐复制到项目测试目录，然后按项目 design token / 组件结构调整 surface 抽取。
+`../impl-visual/helpers/flutter/flutter_visual_contract.dart` 是可复制模板（随通用化迁至 impl-visual），不是稳定 package API。推荐复制到项目测试目录，然后按项目 design token / 组件结构调整 surface 抽取。
 
 第一版 helper 包含：
 

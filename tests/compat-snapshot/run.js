@@ -5,7 +5,8 @@
  * 一组冻结的消费仓 fixture 场景（见下方 SCENARIOS 表，正向 + 负向），run-checks 输出
  * 与 golden 逐字节比对（绝对路径归一化为 <node>/<kit> 占位）+ exit code 断言 + fixture
  * 防改写检查。覆盖面：v2.1 单模块零漂移、多模块 profile、baseline 迁移防线、--only
- * fail closed、空 modules、customGuards 判定契约。
+ * fail closed、空 modules、customGuards 判定契约、impl-visual matcher 契约
+ * （config-only / execute 端到端 / reporter 与 regex 校验负向）。
  *
  * 用法：
  *   node tests/compat-snapshot/run.js            比对（CI 用）
@@ -35,6 +36,11 @@ const SCENARIOS = [
   { name: 'customGuards 不可翻案（exit 非零 + RESULT: PASS，负向）', dir: 'fixture-custom-guards', args: ['--only', 'project-liar'], expectExit: 1, golden: 'golden-run-checks-custom-liar.txt' },
   { name: 'customGuards 无 RESULT 行按退出码（正向）', dir: 'fixture-custom-guards', args: ['--only', 'project-noresult'], expectExit: 0, golden: 'golden-run-checks-custom-noresult.txt' },
   { name: 'customGuards 缺 module 两态契约（负向）', dir: 'fixture-custom-no-module', args: [], expectExit: 1, golden: 'golden-run-checks-custom-no-module.txt' },
+  { name: 'impl-visual config-only（playwright-list 声明）', dir: 'fixture-impl-visual', args: [], expectExit: 0, golden: 'golden-run-checks-implvisual-config.txt' },
+  { name: 'impl-visual --execute-impl（matcher 端到端：ANSI 剥离 + regex 覆盖）', dir: 'fixture-impl-visual', args: ['--execute-impl'], expectExit: 0, golden: 'golden-run-checks-implvisual-exec.txt' },
+  { name: 'impl-visual --execute-impl 缺 evidence（负向）', dir: 'fixture-impl-visual-miss', args: ['--execute-impl'], expectExit: 1, golden: 'golden-run-checks-implvisual-miss.txt' },
+  { name: 'impl-visual 单条 evidence 覆盖 matcher 的 reporter 要求（负向）', dir: 'fixture-impl-visual-badreporter', args: [], expectExit: 1, golden: 'golden-run-checks-implvisual-badreporter.txt' },
+  { name: 'impl-visual config-only 拦非法 regex pattern（负向）', dir: 'fixture-impl-visual-badregex', args: [], expectExit: 1, golden: 'golden-run-checks-implvisual-badregex.txt' },
 ];
 
 function fixturesDirty() {

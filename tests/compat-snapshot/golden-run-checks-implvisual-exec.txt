@@ -1,0 +1,20 @@
+聚合入口：启用层/扩展 [impl-visual]（--execute-impl） · 串跑 1 个 guard
+  · 跳过 check-changelog.js（未启用层 'base'）
+  · 跳过 check-deviation.js（未启用层 'handoff'）
+  · 跳过 check-i18n.js（未启用层 'i18n'）
+  · 跳过 check-icons.js（未启用层 'base'）
+  · 跳过 check-manifest.js（未启用层 'handoff'）
+  · 跳过 check-orphan-css.js（未启用层 'base'）
+  · 跳过 check-tokens.js（未启用层 'base'）
+
+── impl-visual/check-impl-visual.js ──────────────────────────────
+[check-impl-visual] impl-visual: errors 0 · warnings 0 · execute-impl
+[check-impl-visual]   ✓ sample-screen: anchors=2 contracts=1 interactions=1 evidence=3
+[check-impl-visual]   · execute sample-screen: node fake-playwright.js --reporter=list
+
+[check-impl-visual] RESULT: PASS
+
+════════ 汇总 ════════
+  ✓ check-impl-visual  exit=0  RESULT: PASS
+
+RESULT: PASS

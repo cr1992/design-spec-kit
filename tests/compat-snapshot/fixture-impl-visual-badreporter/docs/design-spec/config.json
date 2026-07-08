@@ -1,0 +1,19 @@
+{
+  "kit": { "layers": ["impl-visual"] },
+  "extensions": {
+    "impl-visual": {
+      "screens": [
+        {
+          "id": "sample-screen",
+          "manifest": "docs/design-spec/manifests/sample-screen.manifest.generated.json",
+          "command": "node fake-tests.js",
+          "matcher": "substring",
+          "evidence": [
+            "sample panel uses dark glass surface in light and dark",
+            { "name": "panel motion", "match": "playwright-list" }
+          ]
+        }
+      ]
+    }
+  }
+}

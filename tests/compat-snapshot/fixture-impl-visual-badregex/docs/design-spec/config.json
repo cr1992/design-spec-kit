@@ -1,0 +1,17 @@
+{
+  "kit": { "layers": ["impl-visual"] },
+  "extensions": {
+    "impl-visual": {
+      "screens": [
+        {
+          "id": "sample-screen",
+          "manifest": "docs/design-spec/manifests/sample-screen.manifest.generated.json",
+          "command": "node fake-tests.js",
+          "evidence": [
+            { "name": "broken pattern", "match": "regex", "pattern": "[" }
+          ]
+        }
+      ]
+    }
+  }
+}
