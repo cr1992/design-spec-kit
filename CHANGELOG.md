@@ -3,6 +3,13 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.3.0 — 2026-07-09
+
+- [工具] 新增 `tools/design-sync.js`：设计 handoff → 消费仓 target 同步引擎（与平台无关，业务细节全在消费仓 `docs/design-spec/design-sync.json` profile）。能力：内置零依赖 ZIP 读取器（中央目录权威、避 data-descriptor 歧义，store + deflate）；三态对比 changed/onlyInSource/onlyInTarget（`transferExcludes` 不同步、`diffExcludes` 全排除、`targetOnlyAllow` 把目标侧独有产物如 `*.standalone.html` 移出 residue，优先级 diffExcludes > targetOnlyAllow）；`_archive` 双向提示（report-only）；覆盖/删除安全门（只比对将被动到的 path 与 `git status --porcelain -- <target>` 交集、无关 dirty 不阻塞、覆盖须 `--force-overwrite`、删除须 `--apply-deletes`、两门独立）；非破坏 apply 且写盘边界锁死 target 子树；postSync 编排（link-check / manifest-sync / manifest-sync-check / design-spec-check / command，顺序契约重生先于校验，dry-run 全 SKIP）；`--json` 机读报告契约（jsonVersion=1，供 skill wrapper 解析，不解析人类文本）。manifest 路径不重复声明——`manifest-sync.js` 自读 `config.json` guard。CLI `--zip`/`--source`/`--module`/`--dry-run`/`--check-only`/`--json`/`--apply-deletes`/`--force-overwrite`；`--module` 省略按 `topNameHints` 自动认、认不准 fail-closed。
+- [安全] ZIP 解压 fail-closed（外部输入）：拒路径逃逸 `..` / 绝对路径 / NUL / symlink entry；zip bomb 单文件·总量·entry 数上限 + 膨胀比阈值；ZIP64 / 加密 / 未知压缩方法一律 fail-closed；apply 写盘每路径规范化后必须仍在 target 子树内（工具级不变量，独立于宿主 auto-mode）。校验全在中央目录解析阶段，越界即 abort、不落任何盘。
+- [文档] 新增 `docs/DESIGN-SYNC.md`：引擎边界、`design-sync.json` schema（三种 excludes 语义与优先级）、CLI、三态、安全门、解压安全、postSync 与 command 执行契约、`--json` 契约、与实现级视觉 evidence 的分层。
+- [工程] 新增 `tests/design-sync/run.js`（source-only，不随 bundle 分发）：hermetic 单测自拼 ZIP 字节，覆盖良性解压（store + deflate + 中文名）、恶意 zip 全 fail-closed 且不落盘（`../` / 绝对路径 / symlink）、exclude/targetOnlyAllow glob 语义、覆盖/删除安全门。接入 `ci-check.js`（tests/ 不随 bundle → 拆包环境明确 skip）。design-sync 作为工具文件也自动进 `node --check` 与 bundle 漂移校验。
+
 ## v2.2.0 — 2026-07-08
 
 - [工具] 落地 MULTI-MODULE-PROPOSAL 方案 4：新增 `tools/manifest-sync.js`（schema-owned canonicalization 上收）——delegated projection 裁剪、稳定 JSON 序列化、screens 清单生成、`--check` 逐字节漂移校验；多模块感知（按 modules.<m>.guards ⊕ 顶层合并读 check-manifest 配置，`--module <m>` 限定，缺值/单模块模式下带 --module 均 fail closed 不静默退化全量）；generated 追加 `generator: "schema-projection-v1"` 版本标记（schema 增可选 `generator` 字段），projection 演进走 kit 版本发布。消费仓同构脚本迁移后删除。

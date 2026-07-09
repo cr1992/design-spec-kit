@@ -53,6 +53,12 @@ if (existsSync(path.join(KIT_ROOT, 'tests/compat-snapshot/run.js'))) {
   console.log('\n── v2.1 compat snapshot ─────────────────────────────');
   console.log('· 跳过：tests/ 不随 bundle 分发（source-only 检查，kit 源仓 CI 才跑）');
 }
+if (existsSync(path.join(KIT_ROOT, 'tests/design-sync/run.js'))) {
+  run('design-sync engine unit', process.execPath, ['tests/design-sync/run.js']);
+} else {
+  console.log('\n── design-sync engine unit ─────────────────────────────');
+  console.log('· 跳过：tests/ 不随 bundle 分发（source-only 检查，kit 源仓 CI 才跑）');
+}
 run('bundle drift check', process.execPath, ['tools/build-bundle.js', '--check']);
 
 console.log('\nRESULT: PASS');
