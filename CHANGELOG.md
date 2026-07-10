@@ -3,6 +3,10 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.3.1 — 2026-07-10
+
+- [工具] `design-sync` 的 best-effort link-check 识别运行时模板路径：跳过 ES template literal（`${...}`）、Handlebars（`{{...}}`）与 EJS（`<%...%>`），不再把占位符当作同包静态文件报假断链；真实相对静态断链仍会报告。`tests/design-sync/run.js` 增覆盖。
+
 ## v2.3.0 — 2026-07-09
 
 - [工具] 新增 `tools/design-sync.js`：设计 handoff → 消费仓 target 同步引擎（与平台无关，业务细节全在消费仓 `docs/design-spec/design-sync.json` profile）。能力：内置零依赖 ZIP 读取器（中央目录权威、避 data-descriptor 歧义，store + deflate）；三态对比 changed/onlyInSource/onlyInTarget（`transferExcludes` 不同步、`diffExcludes` 全排除、`targetOnlyAllow` 把目标侧独有产物如 `*.standalone.html` 移出 residue，优先级 diffExcludes > targetOnlyAllow）；`_archive` 双向提示（report-only）；覆盖/删除安全门（只比对将被动到的 path 与 `git status --porcelain -- <target>` 交集、无关 dirty 不阻塞、覆盖须 `--force-overwrite`、删除须 `--apply-deletes`、两门独立）；非破坏 apply 且写盘边界锁死 target 子树；postSync 编排（link-check / manifest-sync / manifest-sync-check / design-spec-check / command，顺序契约重生先于校验，dry-run 全 SKIP）；`--json` 机读报告契约（jsonVersion=1，供 skill wrapper 解析，不解析人类文本）。manifest 路径不重复声明——`manifest-sync.js` 自读 `config.json` guard。CLI `--zip`/`--source`/`--module`/`--dry-run`/`--check-only`/`--json`/`--apply-deletes`/`--force-overwrite`；`--module` 省略按 `topNameHints` 自动认、认不准 fail-closed。

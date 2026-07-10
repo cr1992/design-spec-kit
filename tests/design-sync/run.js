@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  matchAny, computeGate, assertSafeEntryName, readZipCentral, extractZipToDir,
+  matchAny, computeGate, assertSafeEntryName, readZipCentral, extractZipToDir, linkCheck,
 } from '../../tools/design-sync.js';
 
 let fail = 0;
@@ -147,6 +147,24 @@ async function main() {
     ok(`拒 ${JSON.stringify(bad)}`, (() => { try { assertSafeEntryName(bad); return false; } catch { return true; } })());
   }
   ok('收 a/b/c.txt', (() => { try { assertSafeEntryName('a/b/c.txt'); return true; } catch { return false; } })());
+
+  // 6) link-check：模板变量只能在运行时解析，不能报成静态断链；真正的静态断链仍要报。
+  console.log('[link-check] 模板变量 / 静态断链');
+  const dynamicHtml = path.join(work, 'dynamic.html');
+  await fs.writeFile(dynamicHtml, '<link rel="stylesheet" href="${f}">');
+  const dynamicBroken = await linkCheck('', new Map([['dynamic.html', dynamicHtml]]));
+  ok('ES template 路径不报假断链', dynamicBroken.length === 0);
+
+  const handlebarsHtml = path.join(work, 'handlebars.html');
+  await fs.writeFile(handlebarsHtml, '<link rel="stylesheet" href="{{ asset }}">');
+  const handlebarsBroken = await linkCheck('', new Map([['handlebars.html', handlebarsHtml]]));
+  ok('Handlebars 路径不报假断链', handlebarsBroken.length === 0);
+
+  const missingHtml = path.join(work, 'missing.html');
+  await fs.writeFile(missingHtml, '<link rel="stylesheet" href="assets/missing.css">');
+  const staticBroken = await linkCheck('', new Map([['missing.html', missingHtml]]));
+  ok('静态断链仍会报告', staticBroken.length === 1 &&
+    staticBroken[0].from === 'missing.html' && staticBroken[0].ref === 'assets/missing.css');
 
   rmSync(work, { recursive: true, force: true });
 

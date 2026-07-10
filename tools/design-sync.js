@@ -402,7 +402,7 @@ function runCommand(step) {
 }
 
 // link-check：保守 best-effort——报告断链但不硬闸（解析局限不该拦真实同步）。
-async function linkCheck(target, srcMap) {
+export async function linkCheck(target, srcMap) {
   const broken = [];
   const refRe = /(?:href|src)\s*=\s*["']([^"'#?]+)["']|url\(\s*["']?([^"'()?#]+)["']?\s*\)/gi;
   for (const [rel, abs] of srcMap) {
@@ -414,6 +414,9 @@ async function linkCheck(target, srcMap) {
       const raw = (m[1] || m[2] || '').trim();
       if (!raw || /^(https?:|data:|mailto:|tel:|\/\/|#)/i.test(raw)) continue;
       if (raw.startsWith('/')) continue; // 绝对站点路径不判
+      // `${f}` / `{{ asset }}` / `<%= asset %>` 只能在模板运行时才能解析；
+      // 不能把字面占位符当作同包静态文件，从而制造假断链警告。
+      if (raw.includes('${') || raw.includes('{{') || raw.includes('<%')) continue;
       const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(rel), raw));
       if (resolved.startsWith('..')) continue;
       if (!srcMap.has(resolved) && !srcMap.has(resolved.replace(/\/$/, '/index.html'))) {

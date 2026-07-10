@@ -1,4 +1,4 @@
-# design-spec-kit · 单文件分发包（One-File Bundle）· v2.3.0
+# design-spec-kit · 单文件分发包（One-File Bundle）· v2.3.1
 #
 # 用途：当目标项目只能「一个个上传文件」、没有 git 时，只上传/粘贴本文件这一个即可。
 #
@@ -2996,7 +2996,7 @@ String _componentSignature(double value) => value.toStringAsFixed(4);
 ⟦FILE design-spec-kit/package.json⟧
 {
   "name": "design-spec-kit",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "private": true,
   "type": "module",
   "description": "设计纪律 + 还原交接套件（与平台无关）。guard 支持 node 直跑或无 shell 环境粘贴执行。",
@@ -5707,7 +5707,7 @@ function runCommand(step) {
 }
 
 // link-check：保守 best-effort——报告断链但不硬闸（解析局限不该拦真实同步）。
-async function linkCheck(target, srcMap) {
+export async function linkCheck(target, srcMap) {
   const broken = [];
   const refRe = /(?:href|src)\s*=\s*["']([^"'#?]+)["']|url\(\s*["']?([^"'()?#]+)["']?\s*\)/gi;
   for (const [rel, abs] of srcMap) {
@@ -5719,6 +5719,9 @@ async function linkCheck(target, srcMap) {
       const raw = (m[1] || m[2] || '').trim();
       if (!raw || /^(https?:|data:|mailto:|tel:|\/\/|#)/i.test(raw)) continue;
       if (raw.startsWith('/')) continue; // 绝对站点路径不判
+      // `${f}` / `{{ asset }}` / `<%= asset %>` 只能在模板运行时才能解析；
+      // 不能把字面占位符当作同包静态文件，从而制造假断链警告。
+      if (raw.includes('${') || raw.includes('{{') || raw.includes('<%')) continue;
       const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(rel), raw));
       if (resolved.startsWith('..')) continue;
       if (!srcMap.has(resolved) && !srcMap.has(resolved.replace(/\/$/, '/index.html'))) {
@@ -7112,6 +7115,6 @@ if (presentCore.length === 0) {
 ⟦/FILE⟧
 
 ⟦FILE .design-spec-kit.version⟧
-2.3.0
+2.3.1
 ⟦/FILE⟧
 
