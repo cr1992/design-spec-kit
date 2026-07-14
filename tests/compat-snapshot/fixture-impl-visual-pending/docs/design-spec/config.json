@@ -1,0 +1,25 @@
+{
+  "kit": { "layers": ["impl-visual"] },
+  "extensions": {
+    "impl-visual": {
+      "manifestDir": "docs/design-spec/manifests",
+      "screens": [
+        {
+          "id": "sample-screen",
+          "manifest": "docs/design-spec/manifests/sample-screen.manifest.generated.json",
+          "command": "node fake-playwright.js --reporter=list",
+          "matcher": "playwright-list",
+          "evidence": [
+            "sample panel uses dark glass surface in light and dark",
+            "sample panel dismisses on backdrop tap",
+            { "name": "panel motion timing", "match": "regex", "pattern": "animated presentation \\(\\d+ms\\)" }
+          ]
+        }
+      ],
+      "exempt": [
+        { "id": "static-screen", "note": "纯静态说明页，无实现侧交互，不做实现核对" },
+        { "id": "gone-screen", "note": "早期屏，已从设计稿移除" }
+      ]
+    }
+  }
+}

@@ -10,7 +10,8 @@
   },
   "extensions": {
     "flutter-visual": {
-      "screens": []
+      "screens": [],
+      "exempt": []
     }
   },
   "guards": {

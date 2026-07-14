@@ -3,6 +3,15 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.4.0 — 2026-07-14
+
+- [guard] `impl-visual`（含 `flutter-visual` 别名）config-only 新增两道闭环护栏，均 warning 级、非 FAIL：
+  - **待登记队列**：manifestDir 下的 `*.manifest.generated.json` 未在 `extensions.<name>.screens[]` 登记且不在 `exempt` 名单时逐条挂 warning——设计 sync 带回新屏当下挂账、实现落地补 command + evidence 销账，堵住「manifest 进了 handoff 体系但 evidence 永不执行」的静默缺口。manifestDir 解析：extension 自己的 `manifestDir` > `check-manifest` guard 配置（模块键覆盖顶层）> 默认 `docs/manifests`；目录不存在（未接 handoff 生成物）静默跳过。新配置字段 `extensions.<name>.exempt`（`[{id, note}]`，note 必填——豁免必须写明原因，形态错误 fail closed）；exempt 条目失效（已登记 / 无对应生成物）提醒清理。
+  - **evidence 静态核对**：从 `command` 解析实际存在的源文件（按 `&&`/`;` 分段、跟踪 `cd` 前缀），非 regex 的 evidence name 与源码做归一化子串比对（剥转义反斜杠、去空白/引号，容忍换行拼接），缺失即 warning——测试改名断链在每次 config-only 检查（含 CI）可见，不用等本地 `--execute-impl`。command 解析不出源文件（make target 等）静默跳过；动态拼接的用例名改用 regex matcher 豁免。
+- [guard] 异常路径 fail closed / 显性化（review 两轮返工补齐，堵 false-green）：显式配置的 manifestDir（extension 级或 check-manifest guard）指向不可读目录 → **FAIL**；缺省回退路径仅 ENOENT（未接 handoff 生成物）静默跳过，ENOTDIR / EACCES 等其余异常 → **FAIL**。command 显式引用的文件不存在（测试改名/删除/路径拼错）→ **warning**（仅解析不出任何文件 token 才静默跳过）；command 切词用轻量 shell-word lexer（单/双引号、\ 转义、带空格路径、未引号的 && ; | 分段），引号包裹的文件引用不再漏检。
+- [工程] compat-snapshot 新增 6 场景：`fixture-impl-visual-pending`（待登记 + 静态核对 + exempt 生效/失效，warning 且 PASS）、`fixture-impl-visual-badexempt`（exempt 缺 note fail closed）、`fixture-impl-visual-gonefile`（command 引用文件不存在挂 warning）、`fixture-impl-visual-badmanifestdir`（显式 manifestDir 不可读 fail closed）、`fixture-impl-visual-quotedgone`（引号包裹的缺失文件仍挂 warning）、`fixture-impl-visual-defaultnotdir`（缺省 manifestDir ENOTDIR fail closed）；v2.1 fixture 补测试源文件使其自洽（顺带覆盖 flutter-expanded 静态核对正向路径），既有 21 场景 golden 零漂移。
+- [文档] HANDOFF §3.1 补两道护栏说明；`docs/config.template.json` flutter-visual 块补 `exempt` 字段；extension README 修正「不解析任何实现语言源码」表述并补齐 manifestDir / exempt / 静态核对行为文档。
+
 ## v2.3.1 — 2026-07-10
 
 - [工具] `design-sync` 的 best-effort link-check 识别运行时模板路径：跳过 ES template literal（`${...}`）、Handlebars（`{{...}}`）与 EJS（`<%...%>`），不再把占位符当作同包静态文件报假断链；真实相对静态断链仍会报告。`tests/design-sync/run.js` 增覆盖。

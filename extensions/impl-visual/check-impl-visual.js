@@ -8,6 +8,15 @@
  *   - interactions trigger / target 引用合法 anchor
  *   - contracts / interactions 需要 evidence；evidence 需要 command
  *   - command 满足所选 matcher 声明的 reporter 要求
+ *   - 待登记队列（warning，非 FAIL）：manifestDir 下的 *.manifest.generated.json 若未在
+ *     screens[] 登记、也不在 extensions.<name>.exempt（[{id, note}]，note 必填）里，
+ *     逐条挂 warning——设计 sync 带回新屏时立即可见，实现落地后补登记销账。
+ *     manifestDir 为显式配置（extension 级或 check-manifest guard）但目录不可读 = 配置错误 FAIL；
+ *     只有缺省回退路径不存在才静默跳过（该模块未接 handoff 生成物）
+ *   - evidence 静态核对（warning，非 FAIL，仅 config-only）：从 command 解析源文件，
+ *     非 regex 的 evidence name 归一化后必须能在源文件里找到——测试改名断链
+ *     不用等 --execute-impl 才暴露；command 里显式引用的文件不存在也挂 warning，
+ *     只有解析不出任何文件 token（make target 等）才静默跳过
  *
  * 传入 --execute-impl 时才运行项目声明的 command，用 matcher 从输出中核对 evidence。
  *
@@ -21,7 +30,7 @@
  * 层名 / 配置路径 / 输出文案与独立 flutter-visual 时代逐字节一致。
  */
 
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
@@ -219,6 +228,172 @@ function validateEvidence(screen, manifest, interactions, matcher) {
   return { evidence, contractAnchors };
 }
 
+// ─── 待登记队列（coverage）───────────────────────────────────
+// manifestDir 解析：extension 自己的 manifestDir > check-manifest guard 配置（模块键覆盖顶层）> 默认。
+// 返回 { dir, source }——source 区分显式配置与缺省回退：显式配置指向不可读目录是配置错误（fail closed），
+// 缺省回退不存在只说明该模块没接 handoff 生成物，静默跳过。
+function resolveManifestDir(config, kitModule, extConfig) {
+  if (typeof extConfig.manifestDir === 'string' && extConfig.manifestDir.trim()) {
+    return { dir: extConfig.manifestDir, source: `extensions.${EXTENSION_NAME}.manifestDir` };
+  }
+  const pick = (node) => node?.guards?.['check-manifest'] || node?.guards?.['check-manifest.js'] || {};
+  const merged = kitModule
+    ? { ...pick(config), ...pick(config.modules?.[kitModule]) }
+    : pick(config);
+  if (typeof merged.manifestDir === 'string' && merged.manifestDir.trim()) {
+    return { dir: merged.manifestDir, source: 'check-manifest guard 配置的 manifestDir' };
+  }
+  return { dir: 'docs/manifests', source: null };
+}
+
+// exempt 形态校验（fail closed：豁免必须写明原因）；返回 Map<id, note>，形态错误记 error
+function parseExempt(extConfig) {
+  const raw = extConfig.exempt;
+  const exempt = new Map();
+  if (raw == null) return exempt;
+  if (!Array.isArray(raw)) {
+    error(`extensions.${EXTENSION_NAME}.exempt 必须是数组（[{id, note}]）`);
+    return exempt;
+  }
+  raw.forEach((item, index) => {
+    if (!isObject(item) || typeof item.id !== 'string' || !item.id.trim()
+      || typeof item.note !== 'string' || !item.note.trim()) {
+      error(`extensions.${EXTENSION_NAME}.exempt[${index}] 必须是 { id, note } 且两者非空——豁免必须写明原因`);
+      return;
+    }
+    exempt.set(item.id, item.note);
+  });
+  return exempt;
+}
+
+async function checkCoverage(config, kitModule, extConfig, registeredIds) {
+  const exempt = parseExempt(extConfig);
+  const { dir, source } = resolveManifestDir(config, kitModule, extConfig);
+  const SUFFIX = '.manifest.generated.json';
+  let entries;
+  try {
+    entries = await readdir(absProjectPath(dir));
+  } catch (err) {
+    const code = err && err.code ? err.code : String(err);
+    if (source) {
+      // 显式配置的对账面读不到 = 配置错误，fail closed——静默跳过会让待登记队列整体假绿
+      error(`${source} 指向不可读目录：${dir}（${code}）——修正路径，或该模块确无 handoff 生成物时移除该配置`);
+      return;
+    }
+    // 缺省回退路径只有 ENOENT（目录不存在 = 该模块未接 handoff 生成物）可静默跳过；
+    // ENOTDIR / EACCES 等其余异常说明对账面状态异常，静默会假绿
+    if (code === 'ENOENT') return;
+    error(`缺省 manifestDir 读取异常：${dir}（${code}）——对账面不可用；修复该路径，或用 extensions.${EXTENSION_NAME}.manifestDir 显式指向生成物目录`);
+    return;
+  }
+  const manifestIds = entries.filter((f) => f.endsWith(SUFFIX)).map((f) => f.slice(0, -SUFFIX.length)).sort();
+  for (const id of manifestIds) {
+    if (registeredIds.has(id) || exempt.has(id)) continue;
+    warn(`待登记：${dir}/${id}${SUFFIX} 已进 handoff 体系，但未在 extensions.${EXTENSION_NAME}.screens 登记——实现落地后补 command + evidence；有意不做实现核对则加入 extensions.${EXTENSION_NAME}.exempt（附 note 说明原因）`);
+  }
+  for (const id of exempt.keys()) {
+    if (registeredIds.has(id)) {
+      warn(`exempt '${id}' 同时已在 screens 登记，豁免条目已失效，请删除`);
+    } else if (!manifestIds.includes(id)) {
+      warn(`exempt '${id}' 没有对应生成物（${dir}/${id}${SUFFIX}），豁免条目已失效，请删除`);
+    }
+  }
+}
+
+// ─── evidence 静态核对（config-only）─────────────────────────
+// 轻量 shell-word lexer：把 command 切成「段（未引号的 && / ; / | / || 为界）× 词（空白为界）」。
+// 单引号内原样；双引号内支持 \ 转义；未引号部分支持 \ 转义与引号进入。不做变量展开/globbing——
+// 只为让 `node 'a b.js'` 这类带引号/空格的文件引用被正确识别，不是完整 shell 实现。
+function lexCommandSegments(command) {
+  const s = String(command);
+  const segments = [];
+  let words = [];
+  let cur = '';
+  let hasCur = false;
+  let quote = null;
+  const pushWord = () => { if (hasCur) { words.push(cur); cur = ''; hasCur = false; } };
+  const pushSegment = () => { pushWord(); if (words.length > 0) segments.push(words); words = []; };
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (quote === "'") {
+      if (ch === "'") { quote = null; } else { cur += ch; }
+      continue;
+    }
+    if (quote === '"') {
+      if (ch === '\\' && i + 1 < s.length) { cur += s[i + 1]; i++; continue; }
+      if (ch === '"') { quote = null; continue; }
+      cur += ch;
+      continue;
+    }
+    if (ch === '\\' && i + 1 < s.length) { cur += s[i + 1]; hasCur = true; i++; continue; }
+    if (ch === "'" || ch === '"') { quote = ch; hasCur = true; continue; }
+    if (/\s/.test(ch)) { pushWord(); continue; }
+    if (ch === ';') { pushSegment(); continue; }
+    if (ch === '&' && s[i + 1] === '&') { pushSegment(); i++; continue; }
+    if (ch === '|') { pushSegment(); if (s[i + 1] === '|') i++; continue; }
+    cur += ch;
+    hasCur = true;
+  }
+  pushSegment();
+  return segments;
+}
+
+// 从 command 解析源文件：逐段跟踪 cd 前缀，段内带扩展名（首字母开头，排除 1.2.3 类版本号）
+// 的词即文件候选。返回 { files, missing }——candidate 存在进 files，不存在进 missing：
+// 「没有任何文件 token」（make target 等）与「显式引用的文件不存在」（改名/删除/路径拼错）必须区分，
+// 后者静默跳过会让静态核对整体假绿。
+async function resolveCommandFiles(command) {
+  let cwd = PROJECT_ROOT;
+  const files = [];
+  const missing = [];
+  for (const tokens of lexCommandSegments(command)) {
+    if (tokens[0] === 'cd' && tokens[1]) {
+      cwd = path.isAbsolute(tokens[1]) ? tokens[1] : path.join(cwd, tokens[1]);
+      continue;
+    }
+    for (const token of tokens) {
+      if (token.startsWith('-') || token.includes('://') || !/\.[A-Za-z][A-Za-z0-9]*$/.test(token)) continue;
+      const candidate = path.isAbsolute(token) ? token : path.join(cwd, token);
+      try {
+        if ((await stat(candidate)).isFile()) files.push(candidate);
+        else missing.push(path.relative(PROJECT_ROOT, candidate));
+      } catch {
+        missing.push(path.relative(PROJECT_ROOT, candidate));
+      }
+    }
+  }
+  return { files, missing };
+}
+
+// 归一化：剥转义反斜杠 + 去空白/引号——容忍源码里字符串换行拼接与引号转义
+const normalizeForSource = (s) => s.replace(/\\/g, '').replace(/['"`\s]+/g, '');
+
+async function staticEvidenceCheck(validatedScreens) {
+  for (const item of validatedScreens) {
+    if (!item || item.evidence.length === 0 || !item.matcher) continue;
+    const { screen, evidence, matcher } = item;
+    if (typeof screen.command !== 'string' || !screen.command.trim()) continue;
+    const { files, missing } = await resolveCommandFiles(screen.command);
+    if (missing.length > 0) {
+      warn(`${screen.id}: command 引用的文件不存在：${missing.join(', ')}——测试文件改名/删除/路径拼错会让 evidence 永不核对；请修正 command`);
+    }
+    if (files.length === 0) continue; // 解析不出任何存在的源文件（如 make target），静态核对不适用
+    let haystack = '';
+    for (const file of files) {
+      try { haystack += normalizeForSource(await readFile(file, 'utf8')); }
+      catch { /* 读不到就少一份来源，不阻塞 */ }
+    }
+    if (!haystack) continue;
+    for (const e of evidence) {
+      const effectiveKey = e.match ?? matcher.key;
+      if (effectiveKey === 'regex' || e.pattern != null) continue; // regex/pattern 语义面向运行输出，静态跳过
+      if (!haystack.includes(normalizeForSource(e.name))) {
+        warn(`${screen.id}: evidence '${e.name}' 未出现在测试源码（${files.map((f) => path.relative(PROJECT_ROOT, f)).join(', ')}）——测试改名会静默断链；改名请同步 config，动态拼接的用例名可为该条改用 regex matcher`);
+      }
+    }
+  }
+}
+
 async function runCommand(command) {
   return new Promise((resolve) => {
     const child = spawn(command, {
@@ -363,10 +538,20 @@ async function main() {
   for (const screen of extConfig.screens) {
     validated.push(await validateScreen(screen));
   }
+  // 待登记队列：manifest 已生成但 screens 未登记 → warning（execute 与 config-only 均报）
+  if (errors.length === 0) {
+    const registeredIds = new Set(
+      extConfig.screens.filter(isObject).map((s) => s.id).filter((id) => typeof id === 'string' && id.trim()),
+    );
+    await checkCoverage(config, kitModule, extConfig, registeredIds);
+  }
   if (EXECUTE_IMPL && errors.length === 0) {
     await executeEvidence(validated);
   } else if (!EXECUTE_IMPL) {
     reports.push(`  · config-only 模式：未执行 ${IMPL_LABEL}；需要实现核对时加 --execute-impl`);
+    if (errors.length === 0) {
+      await staticEvidenceCheck(validated);
+    }
   }
 }
 
