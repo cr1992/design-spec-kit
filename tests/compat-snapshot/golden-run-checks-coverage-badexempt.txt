@@ -1,0 +1,25 @@
+聚合入口：启用层/扩展 [handoff] · 串跑 1 个 guard
+
+── check-manifest.js ──────────────────────────────
+[check-manifest] scanned 1 manifest · schema=docs/design-spec/screen-manifest.schema.json · errors 1 · warnings 0
+[check-manifest]   ✓ home.manifest.generated.json
+
+[check-manifest] ✗ 设计屏覆盖对账（coverage）：
+[check-manifest]       ✗ coverage 配置形态错误：coverage.exempt[0]（pages/legal.html）缺 note 或过短——豁免必须写明原因（guards['check-manifest'].coverage）
+
+[check-manifest] 修法：
+[check-manifest]   1. schema 违规 → 改「源头」再重生生成物（勿手改 *.manifest.generated.json；HANDOFF §1.2 真源+重生）。
+[check-manifest]   2. states 合计为空 → 补 designed 或 delegated（设计可少画不可不表态）。
+[check-manifest]   3. anchor 撞名 → 改名并 version+1、记 CHANGELOG（anchor 是对账主键）。
+[check-manifest]   4. 覆盖率缺口 → 为缺屏补 manifest，或从屏清单真源移除该 id。
+[check-manifest]   5. source drift → 先同步设计侧语义源，再重生 generated；勿让 generated 落后于 source。
+[check-manifest]   6. coverage 配置坏 → 修 designRoot / screenGlobs / exempt 形态（豁免必须带 note）。
+
+[check-manifest] RESULT: FAIL
+
+════════ 汇总 ════════
+  ✗ check-manifest  exit=1  RESULT: FAIL
+
+修法：上面标 ✗ 的逐个单跑 `<node> <kit>/tools/check-manifest.js` 看详细违规再修
+
+RESULT: FAIL

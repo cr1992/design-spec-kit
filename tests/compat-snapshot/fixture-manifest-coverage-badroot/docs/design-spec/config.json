@@ -1,0 +1,17 @@
+{
+  "kit": { "layers": ["handoff"] },
+  "guards": {
+    "check-manifest": {
+      "manifestDir": "docs/design-spec/manifests",
+      "schemaPath": "docs/design-spec/screen-manifest.schema.json",
+      "coverage": {
+        "designRoot": "no-such-dir",
+        "screenGlobs": ["pages/*.html"],
+        "exempt": [
+          { "source": "pages/legal.html", "note": "静态法务页无交互，不建 manifest" },
+          { "source": "pages/gone.html", "note": "已删除页的豁免残留（测试失效提醒）" }
+        ]
+      }
+    }
+  }
+}

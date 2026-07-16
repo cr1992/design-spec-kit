@@ -14,10 +14,12 @@
 [check-impl-visual]   ⚠ 待登记：docs/design-spec/manifests/extra-screen.manifest.generated.json 已进 handoff 体系，但未在 extensions.impl-visual.screens 登记——实现落地后补 command + evidence；有意不做实现核对则加入 extensions.impl-visual.exempt（附 note 说明原因）
 [check-impl-visual]   ⚠ exempt 'gone-screen' 没有对应生成物（docs/design-spec/manifests/gone-screen.manifest.generated.json），豁免条目已失效，请删除
 [check-impl-visual]   ⚠ sample-screen: evidence 'sample panel dismisses on backdrop tap' 未出现在测试源码（fake-playwright.js）——测试改名会静默断链；改名请同步 config，动态拼接的用例名可为该条改用 regex matcher
+[check-impl-visual] WARNINGS: 3
 
 [check-impl-visual] RESULT: PASS
 
 ════════ 汇总 ════════
-  ✓ check-impl-visual  exit=0  RESULT: PASS
+  ✓ check-impl-visual  exit=0  RESULT: PASS  · warnings 3
+  Σ warnings 合计 3
 
 RESULT: PASS

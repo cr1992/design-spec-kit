@@ -266,6 +266,42 @@ function lastResultLine(out) {
   return null;
 }
 
+// guard 的 `WARNINGS: n` 机器行（无该行 = 0；与 RESULT 同为约定解析面，人类叙述文本不解析）
+function lastWarningsCount(out) {
+  const lines = out.split('\n').map(l => l.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const m = /^WARNINGS:\s*(\d+)$/.exec(lines[i]);
+    if (m) return Number(m[1]);
+  }
+  return 0;
+}
+
+// ─── baseline 债务可见性：汇总行带各账本 totalEntries ─────────────
+// 账本文件是债务真源（guard --write-baseline 写入 totalEntries），run-checks 只读不判——
+// 路径解析逐字镜像 guard 侧规则：模块模式只认模块级 baselinePath（不继承顶层，分账铁律），
+// 缺省 docs/design-spec/baselines/<module>/<guard>.baseline.json；单模块模式认顶层
+// guards.<g>.baselinePath，缺省 tools/<guard>.baseline.json。读不到 / 无 totalEntries → 不展示。
+const BASELINE_GUARDS = new Set(['check-tokens', 'check-icons', 'check-orphan-css', 'check-i18n']);
+function pickGuardCfgFor(node, guard) {
+  return node?.guards?.[guard] || node?.guards?.[`${guard}.js`] || {};
+}
+async function baselineTotal(check) {
+  const guard = normalizeGuardName(check.file);
+  if (check.kind !== 'core' || !BASELINE_GUARDS.has(guard)) return null;
+  let baselinePath;
+  if (check.module) {
+    const modCfg = pickGuardCfgFor(PROJECT_CONFIG.modules?.[check.module], guard);
+    baselinePath = modCfg.baselinePath || `docs/design-spec/baselines/${check.module}/${guard}.baseline.json`;
+  } else {
+    const topCfg = pickGuardCfgFor(PROJECT_CONFIG, guard);
+    baselinePath = Object.prototype.hasOwnProperty.call(topCfg, 'baselinePath') ? topCfg.baselinePath : `tools/${guard}.baseline.json`;
+  }
+  try {
+    const parsed = JSON.parse(await readFile(baselinePath, 'utf8'));
+    return typeof parsed.totalEntries === 'number' ? parsed.totalEntries : null;
+  } catch { return null; }
+}
+
 function enabledLabel() {
   return INSTALLED_LAYERS.join(', ');
 }
@@ -396,6 +432,7 @@ if (presentCore.length === 0) {
     say('\n════════ 汇总 ════════');
     let anyFail = false;
     const guardRows = [];
+    let debtTotal = 0, debtBooks = 0, warningsTotal = 0;
     for (const r of results) {
       // custom guard 判定契约：exit != 0 永远 FAIL；RESULT: FAIL 可否决零退出码；
       // 无 RESULT 行按 exit code（内置 guard 仍要求必须打 RESULT）。
@@ -403,11 +440,30 @@ if (presentCore.length === 0) {
       const verdict = r.resultLine || (isCustom ? `(无 RESULT 行，按退出码判定)` : `(未打印 RESULT，退出码 ${r.code})`);
       const failed = r.code !== 0 || (r.resultLine && r.resultLine.includes('FAIL')) || (!isCustom && !r.resultLine);
       if (failed) anyFail = true;
+      const baseline = await baselineTotal(r.check);
+      const warningCount = lastWarningsCount(r.out);
+      if (baseline !== null) { debtTotal += baseline; debtBooks += 1; }
+      warningsTotal += warningCount;
       guardRows.push({
         module: r.check.module, guard: normalizeGuardName(r.check.file), kind: r.check.kind,
         exit: r.code, result: r.resultLine ? (r.resultLine.includes('FAIL') ? 'FAIL' : 'PASS') : null, failed,
+        baseline, warnings: warningCount,
       });
-      say(`  ${failed ? '✗' : '✓'} ${summaryName(r.check)}  exit=${r.code}  ${verdict}`);
+      const extras = [
+        ...(baseline !== null ? [`baseline ${baseline}`] : []),
+        ...(warningCount > 0 ? [`warnings ${warningCount}`] : []),
+      ];
+      say(`  ${failed ? '✗' : '✓'} ${summaryName(r.check)}  exit=${r.code}  ${verdict}${extras.length ? `  · ${extras.join(' · ')}` : ''}`);
+    }
+    // 债务/告警合计：baseline 是「冻结存量只拦新增」的账本余额——PASS ≠ 没债，这行让退化
+    // 成永久豁免池的风险有仪表盘；warnings 是非 FAIL 挂账（待登记队列 / 覆盖缺口等），
+    // 全绿 pipeline 里别让它埋在 job log 中间。
+    if (debtBooks > 0 || warningsTotal > 0) {
+      const parts = [
+        ...(debtBooks > 0 ? [`baseline 债务合计 ${debtTotal} 条（${debtBooks} 本账）`] : []),
+        ...(warningsTotal > 0 ? [`warnings 合计 ${warningsTotal}`] : []),
+      ];
+      say(`  Σ ${parts.join(' · ')}`);
     }
     const missingRows = [];
     for (const m of coreMissing) {
@@ -451,6 +507,8 @@ if (presentCore.length === 0) {
         missing: missingRows,
         unknownLayers: UNKNOWN_LAYER_NAMES,
         errors: [],   // 主汇总固定带空 errors，与失败早退文档同构（首版契约字段稳定，消费方免 optional handling）
+        // v2.5.0 附加（additive，jsonVersion 不变）：guards[].baseline / guards[].warnings + 本合计
+        totals: { baseline: debtTotal, baselineBooks: debtBooks, warnings: warningsTotal },
         result: anyFail ? 'FAIL' : 'PASS',
       }));
     }

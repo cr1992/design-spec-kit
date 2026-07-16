@@ -3,6 +3,15 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.5.0 — 2026-07-16
+
+- [guard] `check-manifest` 新增可选 `coverage` 设计屏覆盖对账（⑥，report-only）：扫 `designRoot` + `screenGlobs` 收集设计屏源文件，与各 generated 的 `screen.source` 集合做差——设计屏尚无 manifest 逐条挂 **warning、非 FAIL**（④ `screensListPath` 守「清单里的屏都有 manifest」，本维守「设计源文件都进了 manifest 体系」，堵「清单手维护、新屏没人登记、覆盖面停滞无信号」的盲区）。`exempt`（`[{source, note}]`，note 必填 fail closed）豁免确定不建 manifest 的屏；exempt 失效（已覆盖 / 源文件已不存在）提醒清理。coverage 配置形态错误 / `designRoot` 不可读 / 任一 glob 零匹配 → **FAIL**（review 返工补齐：拼错的 glob 若静默通过会输出 `0/0` 假绿，与防漏目标相反）；不配置 `coverage` = 本维关闭、输出零变化。glob 语义（按路径段解析）：`*` 段内不跨 `/`，段级 `**` 匹配零或多个目录段（`**/x` 含根层 x、`a/**/b` 含 a/b、结尾 `/**` 含自身与任意深度），连续 `**` 段折叠（`**/**` ≡ `**`）；review 两轮返工——初版字符串替换把 `**` 编译成必须含 `/` 漏根层文件、二版非重叠替换漏相邻 globstar，终版段解析；语义用例冻结在 `tests/glob-semantics/run.js`（27 用例，接入 ci-check，source-only 不随 bundle）。目录遍历沿用 kit 双环境 walk 惯例与缺省 skipDirs（可 `coverage.skipDirs` 覆盖）。
+- [工具] `run-checks` 汇总债务/告警可见性：每行 guard 追加 `· baseline N`（读该 guard 账本文件 `totalEntries`，路径解析逐字镜像 guard 侧规则——模块模式只认模块级 `baselinePath` 缺省分账路径、单模块认顶层缺省 `tools/<guard>.baseline.json`；读不到 / 无 `totalEntries` 不展示）与 `· warnings N`（解析 guard 新增的 `WARNINGS: n` 机器行，无该行 = 0），末尾给 `Σ baseline 债务合计 X 条（N 本账）· warnings 合计 Y` 合计行——「冻结存量只拦新增」的 baseline 模型 PASS ≠ 没债，这行是防退化成永久豁免池的仪表盘。`--json` 附加 `guards[].baseline` / `guards[].warnings` / `totals`（additive，`jsonVersion` 保持 1）。
+- [guard] `check-manifest` 与 `impl-visual`（含 `flutter-visual` 别名）在 RESULT 前输出 `WARNINGS: n` 机器行（仅 warnings > 0 时打印，干净仓输出零变化）；与 `RESULT:` 同为约定解析面，人类叙述文本仍不作为解析面。
+- [guard] `impl-visual` execute 失败诊断：command 退出码非零时，把子进程输出尾部（最后 ≤40 行）带进 guard 日志——CI 上排障不再只剩一个退出码（review 返工补齐）。
+- [工程] compat-snapshot 新增 5 场景：`fixture-manifest-coverage`（覆盖缺口 + exempt 失效挂 warning 且 PASS，含段级 `**` 命中根层文件的语义样例）、`fixture-manifest-coverage-bad`（exempt 缺 note fail closed）、`fixture-manifest-coverage-badroot`（designRoot 不可读 fail closed）、`fixture-manifest-coverage-emptyglob`（glob 零匹配 fail closed）、`fixture-impl-visual-execfail`（execute 失败：>40 行输出截尾 + 失败诊断日志入 golden），总计 32 场景；既有 golden 演进（汇总行 baseline/warnings 追加、`WARNINGS:` 行、`--json` 附加字段）与实现同 commit。
+- [文档] HANDOFF §1.2 补设计屏覆盖对账说明；`docs/config.template.json` check-manifest 块补 `coverage` 字段；README guard 表与 run-checks 说明同步。
+
 ## v2.4.0 — 2026-07-14
 
 - [guard] `impl-visual`（含 `flutter-visual` 别名）config-only 新增两道闭环护栏，均 warning 级、非 FAIL：

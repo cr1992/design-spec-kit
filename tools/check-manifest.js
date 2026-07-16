@@ -29,6 +29,12 @@ if (typeof readFile !== 'function') {
  *   ④ SCREENS_LIST_PATH 配置时：清单里每个 screen-id 必须有对应 manifest → FAIL（覆盖率对账）
  *   ⑤ SOURCE_MANIFEST_DIR 配置时：设计侧语义源 manifest 与 generated 的 version / anchor /
  *      designed state / delegated state / interactions / contracts 双向一致 → FAIL（防生成物过期但 schema 仍 PASS）
+ *   ⑥ coverage 配置时：扫设计屏源文件（designRoot + screenGlobs），与各 generated 的
+ *      screen.source 集合做差——设计屏尚无 manifest → WARN（覆盖缺口可见，不 FAIL；
+ *      ④ 守「清单里的屏都有 manifest」，本维守「设计源文件都进了 manifest 体系」，两腿互补）。
+ *      exempt 条目必须带 note（fail closed）；exempt 失效（已覆盖 / 源文件已不存在）→ WARN 提醒清理。
+ *      coverage 配置形态错误 / designRoot 不可读 / 任一 glob 零匹配 → FAIL（显式配置指向空无 = 接线坏，
+ *      零匹配静默通过 = 假绿，均不静默）。
  *
  * 怎么跑：AI 沙箱 = read_file 本文件整段粘进 run_script（helper readFile/ls/log）；node/CI = node tools/check-manifest.js。
  *   末行 `RESULT: PASS|FAIL`；FAIL 时 node 置退出码 1，带「修法」提示。配置见下方「配置」区（★必改已标）。
@@ -64,6 +70,13 @@ const SCREENS_LIST_PATH = cfgValue('screensListPath', '');
 // 与 generated 进行漂移对账；留空 '' = 关闭源头漂移检查。
 const SOURCE_MANIFEST_DIR = cfgValue('sourceManifestDir', '');
 const SOURCE_MANIFEST_SUFFIX = cfgValue('sourceManifestSuffix', '.manifest.json');
+
+// ★可选：设计屏覆盖对账（⑥）。配置了才启用；不配置 = 本维关闭、输出零变化。
+//   { designRoot: '设计根目录', screenGlobs: ['pages/*.html', ...],
+//     exempt: [{ source: 'pages/x.html', note: '为何不需要 manifest' }], skipDirs: [...] }
+//   screenGlobs 相对 designRoot；glob 支持 *（段内）与 **（跨段）。
+const COVERAGE_CONFIG = cfgValue('coverage', null);
+const COVERAGE_DEFAULT_SKIP_DIRS = ['node_modules', 'dist', 'build', '.git', '_archive', 'uploads', 'screenshots', 'tmp', 'vendor', 'drafts', 'export'];
 
 // 生成物文件名约定（HANDOFF §1.2）
 const MANIFEST_SUFFIX = '.manifest.generated.json';
@@ -307,6 +320,108 @@ function parseScreensList(raw) {
   return trimmed.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
 }
 
+// ─── ⑥ 设计屏覆盖对账（report-only：缺口 WARN；配置坏 FAIL）───────────
+
+// 简易 glob → 正则（按路径段解析）：`*` 段内不跨 '/'；段级 `**` 匹配零或多个目录段
+// （`**/x` 含根层 x、`a/**/b` 含 a/b、结尾 `/**` 含自身与任意深度）；连续 `**` 段先折叠
+// （`**/**` ≡ `**`）；段内出现的 `**` 按 `*` 处理。其余字符按字面转义，不做花括号/问号。
+// 语义用例冻结在 tests/glob-semantics/run.js（源仓 CI 跑）。
+function globToRegExp(glob) {
+  const rawSegs = glob.split('/').filter((s) => s !== '');
+  const segs = rawSegs.filter((s, i) => !(s === '**' && rawSegs[i - 1] === '**'));
+  let body = '';
+  for (let i = 0; i < segs.length; i++) {
+    const seg = segs[i];
+    if (seg === '**') {
+      if (segs.length === 1) body += '.*';                                  // 整串 '**'
+      else if (i === segs.length - 1) body += '(?:/.*)?';                   // 结尾 '/**'
+      else body += (i === 0 ? '(?:[^/]+/)*' : '/(?:[^/]+/)*');              // 开头 / 中间
+      continue;
+    }
+    if (i > 0 && segs[i - 1] !== '**') body += '/';   // 中间 '**' 的展开式已带结尾 '/'
+    body += seg.replace(/[.+^${}()|[\]\\?]/g, '\\$&').replace(/\*/g, '[^/]*');
+  }
+  return new RegExp(`^${body}$`);
+}
+
+// 形态校验（fail closed）：返回错误行数组；空数组 = 合法。
+function validateCoverageConfig(cov) {
+  const errs = [];
+  if (!cov || typeof cov !== 'object' || Array.isArray(cov)) return ['coverage 必须是对象'];
+  if (typeof cov.designRoot !== 'string' || !cov.designRoot.trim()) errs.push('coverage.designRoot 缺失或为空');
+  if (!Array.isArray(cov.screenGlobs) || cov.screenGlobs.length === 0 || cov.screenGlobs.some((g) => typeof g !== 'string' || !g.trim())) {
+    errs.push('coverage.screenGlobs 必须是非空字符串数组');
+  }
+  if (cov.exempt !== undefined) {
+    if (!Array.isArray(cov.exempt)) errs.push('coverage.exempt 必须是数组');
+    else cov.exempt.forEach((e, i) => {
+      if (!e || typeof e !== 'object' || typeof e.source !== 'string' || !e.source.trim()) errs.push(`coverage.exempt[${i}] 缺 source`);
+      else if (typeof e.note !== 'string' || e.note.trim().length < 4) errs.push(`coverage.exempt[${i}]（${e.source}）缺 note 或过短——豁免必须写明原因`);
+    });
+  }
+  if (cov.skipDirs !== undefined && (!Array.isArray(cov.skipDirs) || cov.skipDirs.some((d) => typeof d !== 'string'))) {
+    errs.push('coverage.skipDirs 必须是字符串数组');
+  }
+  return errs;
+}
+
+// 走 designRoot 收集屏源候选（相对 designRoot 的路径）。沿用 kit 双环境 walk 惯例：
+// 名字含 '.' 视为文件、不含视为目录（shim 无 stat）。
+async function walkDesignRoot(root, rel, skipDirs, out) {
+  let entries;
+  try { entries = await ls(rel ? `${root}/${rel}` : root); } catch { return; }
+  if (!entries || entries.length === 0) return;
+  for (const name of entries) {
+    const relPath = rel ? `${rel}/${name}` : name;
+    if (name.includes('.')) out.push(relPath);
+    else if (!skipDirs.has(name)) await walkDesignRoot(root, relPath, skipDirs, out);
+  }
+}
+
+const normalizeSource = (s) => (typeof s === 'string' ? s.trim().replace(/^\.\//, '') : '');
+
+// 返回 { errs: [], warns: [] }：errs=配置/接线坏（FAIL），warns=覆盖缺口与失效豁免（不 FAIL）。
+async function coverageChecks(manifestSources) {
+  const errs = validateCoverageConfig(COVERAGE_CONFIG);
+  if (errs.length > 0) return { errs: errs.map((e) => `coverage 配置形态错误：${e}（${KIT_MODULE ? `modules.${KIT_MODULE}.` : ''}guards['check-manifest'].coverage）`), warns: [] };
+
+  const root = COVERAGE_CONFIG.designRoot.trim().replace(/\/+$/, '');
+  try { await ls(root); }
+  catch { return { errs: [`coverage.designRoot 不可读：${root}（显式配置指向空无 = 接线坏；目录搬家请同步改配置）`], warns: [] }; }
+
+  const skipDirs = new Set(Array.isArray(COVERAGE_CONFIG.skipDirs) ? COVERAGE_CONFIG.skipDirs : COVERAGE_DEFAULT_SKIP_DIRS);
+  const candidates = [];
+  await walkDesignRoot(root, '', skipDirs, candidates);
+  // 逐 glob 零匹配 fail closed：拼错的 glob 会让本维静默变成 0/0 假绿，与防漏目标相反。
+  // 屏还没建出来的合法过渡期请先移除该 glob，建屏时再加回。
+  const globErrs = [];
+  const matchedSet = new Set();
+  for (const raw of COVERAGE_CONFIG.screenGlobs) {
+    const g = raw.trim().replace(/^\.\//, '');
+    const re = globToRegExp(g);
+    const hits = candidates.filter((p) => re.test(p));
+    if (hits.length === 0) globErrs.push(`coverage.screenGlobs '${raw}' 在 ${root} 下零匹配——glob 拼错或目录结构已变，修 glob 或移除该条（零匹配静默通过 = 假绿）`);
+    for (const p of hits) matchedSet.add(p);
+  }
+  if (globErrs.length > 0) return { errs: globErrs, warns: [] };
+  const screens = [...matchedSet].sort();
+
+  const covered = new Set(manifestSources.map(normalizeSource).filter(Boolean));
+  const exempt = Array.isArray(COVERAGE_CONFIG.exempt) ? COVERAGE_CONFIG.exempt : [];
+  const exemptSources = new Set(exempt.map((e) => normalizeSource(e.source)));
+
+  const warns = [];
+  const uncovered = screens.filter((p) => !covered.has(p) && !exemptSources.has(p));
+  for (const p of uncovered) warns.push(`设计屏尚无 manifest：${p}（补 manifest 进 handoff 体系，或登记 coverage.exempt 并写明原因）`);
+  const screenSet = new Set(screens);
+  for (const e of exempt) {
+    const src = normalizeSource(e.source);
+    if (covered.has(src)) warns.push(`coverage.exempt 失效（已有 manifest 覆盖）：${src}——请清理该豁免条目`);
+    else if (!screenSet.has(src)) warns.push(`coverage.exempt 失效（源文件已不存在或不匹配 screenGlobs）：${src}——请清理该豁免条目`);
+  }
+  return { errs: [], warns, stats: { screens: screens.length, covered: screens.filter((p) => covered.has(p)).length } };
+}
+
 // ─── Main（早退避免深嵌；末行统一由本函数 log RESULT）─────────────
 
 function fatal(lines) { for (const l of lines) log(l); log('\nRESULT: FAIL'); if (globalThis.__NODE__) process.exitCode = 1; }
@@ -334,6 +449,7 @@ async function main() {
   }
 
   const idToFile = new Map();   // screen.id → 文件名（覆盖率对账用）
+  const manifestSources = [];   // screen.source 集合（⑥ 设计屏覆盖对账用）
   const perFile = [];           // { file, errs, warns }
   for (const fname of manifestFiles) {
     const errs = [], fw = [];
@@ -345,6 +461,8 @@ async function main() {
       semanticChecks(manifest, errs, fw);
       const id = manifest && manifest.screen && manifest.screen.id;
       if (typeof id === 'string' && id) idToFile.set(id, fname);
+      const source = manifest && manifest.screen && manifest.screen.source;
+      if (typeof source === 'string' && source.trim()) manifestSources.push(source);
       if (SOURCE_MANIFEST_DIR && typeof id === 'string' && id) {
         const sourcePath = `${SOURCE_MANIFEST_DIR}/${id}${SOURCE_MANIFEST_SUFFIX}`;
         let sourceManifest = null;
@@ -367,10 +485,14 @@ async function main() {
     }
   }
 
+  // ⑥ 设计屏覆盖对账（配置了才启用；缺口 WARN、配置坏 FAIL）
+  let coverage = { errs: [], warns: [], stats: null };
+  if (COVERAGE_CONFIG !== null) coverage = await coverageChecks(manifestSources);
+
   // ─── 报告 ───
   const warns = [];
-  const totalErrs = perFile.reduce((s, f) => s + f.errs.length, 0) + coverageErrs.length;
-  const totalWarns = perFile.reduce((s, f) => s + f.warns.length, 0);
+  const totalErrs = perFile.reduce((s, f) => s + f.errs.length, 0) + coverageErrs.length + coverage.errs.length;
+  const totalWarns = perFile.reduce((s, f) => s + f.warns.length, 0) + coverage.warns.length;
   log(`scanned ${manifestFiles.length} manifest · schema=${SCHEMA_PATH} · errors ${totalErrs} · warnings ${totalWarns}`);
   for (const { file, errs, warns: fw } of perFile) {
     if (errs.length === 0 && fw.length === 0) { log(`  ✓ ${file}`); continue; }
@@ -382,17 +504,28 @@ async function main() {
     log(`\n✗ 覆盖率对账（SCREENS_LIST_PATH=${SCREENS_LIST_PATH}）：`);
     for (const e of coverageErrs) log(`      ✗ ${e}`);
   }
+  if (coverage.errs.length) {
+    log(`\n✗ 设计屏覆盖对账（coverage）：`);
+    for (const e of coverage.errs) log(`      ✗ ${e}`);
+  }
+  if (COVERAGE_CONFIG !== null && coverage.stats) {
+    log(`\nℹ 设计屏覆盖：${coverage.stats.covered}/${coverage.stats.screens} 屏已进 manifest 体系（缺口 WARN 不 FAIL，逐屏补齐或登记豁免）`);
+    for (const w of coverage.warns) log(`  ⚠ ${w}`);
+  }
   if (warns.length) log(`\n⚠ 待裁决队列（contract_ref=TBD，非 FAIL，随迭代评审收敛）：${warns.length} 条`);
 
   if (totalErrs > 0) {
+    if (totalWarns > 0) log(`WARNINGS: ${totalWarns}`);
     return fatal([`\n修法：`,
       `  1. schema 违规 → 改「源头」再重生生成物（勿手改 *${MANIFEST_SUFFIX}；HANDOFF §1.2 真源+重生）。`,
       `  2. states 合计为空 → 补 designed 或 delegated（设计可少画不可不表态）。`,
       `  3. anchor 撞名 → 改名并 version+1、记 CHANGELOG（anchor 是对账主键）。`,
       `  4. 覆盖率缺口 → 为缺屏补 manifest，或从屏清单真源移除该 id。`,
-      `  5. source drift → 先同步设计侧语义源，再重生 generated；勿让 generated 落后于 source。`]);
+      `  5. source drift → 先同步设计侧语义源，再重生 generated；勿让 generated 落后于 source。`,
+      `  6. coverage 配置坏 → 修 designRoot / screenGlobs / exempt 形态（豁免必须带 note）。`]);
   }
   log(`\n✓ check-manifest: 全部生成物过 schema + 语义规则`);
+  if (totalWarns > 0) log(`WARNINGS: ${totalWarns}`);
   log(`\nRESULT: PASS`);
 }
 

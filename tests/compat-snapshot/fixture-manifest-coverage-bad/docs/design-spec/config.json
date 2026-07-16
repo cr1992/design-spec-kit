@@ -1,0 +1,17 @@
+{
+  "kit": { "layers": ["handoff"] },
+  "guards": {
+    "check-manifest": {
+      "manifestDir": "docs/design-spec/manifests",
+      "schemaPath": "docs/design-spec/screen-manifest.schema.json",
+      "coverage": {
+        "designRoot": "design",
+        "screenGlobs": ["pages/*.html"],
+        "exempt": [
+          { "source": "pages/legal.html", "note": "" },
+          { "source": "pages/gone.html", "note": "已删除页的豁免残留（测试失效提醒）" }
+        ]
+      }
+    }
+  }
+}

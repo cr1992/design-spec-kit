@@ -1,0 +1,26 @@
+{
+  "screen": {
+    "id": "home",
+    "title": "Home",
+    "source": "pages/home.html"
+  },
+  "version": 1,
+  "state_classes": {
+    "inherit": true
+  },
+  "elements": [
+    {
+      "anchor": "home-root",
+      "role": "首页根容器"
+    }
+  ],
+  "states": {
+    "designed": [
+      {
+        "id": "default",
+        "note": "落地态"
+      }
+    ],
+    "delegated": []
+  }
+}

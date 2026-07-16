@@ -29,6 +29,8 @@
 
 如果项目保留了设计侧语义源 manifest（例如 `ui-design/.../docs/manifests/<screen>.manifest.json`），在 `docs/design-spec/config.json` 给 `check-manifest` 配 `sourceManifestDir`。guard⑥ 会把 source 与 generated 的 `version`、锚点和状态集合做双向对账，防止「设计源已变、生成物没重生」的假 PASS。
 
+**设计屏覆盖对账（可选，report-only）**：`screensListPath` 守的是「清单里的屏都有 manifest」，但清单本身是手维护的——设计侧新增屏没人写进清单时，guard 全绿、覆盖面停滞无信号。给 `check-manifest` 配 `coverage`（`{designRoot, screenGlobs, exempt?}`）后，guard⑥ 会扫设计屏源文件与各 generated 的 `screen.source` 集合做差：设计屏尚无 manifest → **warning 不 FAIL**（缺口可见、不硬拦节奏）；确定不需要 manifest 的屏登记 `exempt`（`[{source, note}]`，note 必填，缺 note 按配置错误 FAIL）；exempt 失效（已覆盖 / 源文件已不存在）提醒清理。`coverage` 配置形态错误、`designRoot` 不可读、或任一 `screenGlobs` 条目零匹配 → FAIL（显式配置指向空无 = 接线坏；零匹配静默通过 = 假绿）。glob 语义：`*` 段内不跨 `/`，段级 `**` 匹配零或多个目录段（`**/x` 含根层 x、`a/**/b` 含 a/b、结尾 `/**` 含任意深度）。
+
 ### 1.3 状态空间声明（本层的心脏）
 每屏的 `states` 必须显式二分：
 

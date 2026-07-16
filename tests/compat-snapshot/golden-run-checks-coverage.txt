@@ -1,0 +1,22 @@
+聚合入口：启用层/扩展 [handoff] · 串跑 1 个 guard
+
+── check-manifest.js ──────────────────────────────
+[check-manifest] scanned 1 manifest · schema=docs/design-spec/screen-manifest.schema.json · errors 0 · warnings 4
+[check-manifest]   ✓ home.manifest.generated.json
+
+[check-manifest] ℹ 设计屏覆盖：1/5 屏已进 manifest 体系（缺口 WARN 不 FAIL，逐屏补齐或登记豁免）
+[check-manifest]   ⚠ 设计屏尚无 manifest：extra-root.html（补 manifest 进 handoff 体系，或登记 coverage.exempt 并写明原因）
+[check-manifest]   ⚠ 设计屏尚无 manifest：pages/settings.html（补 manifest 进 handoff 体系，或登记 coverage.exempt 并写明原因）
+[check-manifest]   ⚠ 设计屏尚无 manifest：sub/extra-nested.html（补 manifest 进 handoff 体系，或登记 coverage.exempt 并写明原因）
+[check-manifest]   ⚠ coverage.exempt 失效（源文件已不存在或不匹配 screenGlobs）：pages/gone.html——请清理该豁免条目
+
+[check-manifest] ✓ check-manifest: 全部生成物过 schema + 语义规则
+[check-manifest] WARNINGS: 4
+
+[check-manifest] RESULT: PASS
+
+════════ 汇总 ════════
+  ✓ check-manifest  exit=0  RESULT: PASS  · warnings 4
+  Σ warnings 合计 4
+
+RESULT: PASS

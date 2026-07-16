@@ -118,7 +118,7 @@ node tools/run-checks.js
 node tools/build-bundle.js --check
 ```
 
-`run-checks.js` 会按启用层 / extension（`docs/design-spec/config.json` 的 `kit.layers`，缺省 `['base']`）跑 guard。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。Extension 只有被 `kit.layers` 点名时才会发现；已知 extension 目录缺失时普通模式给 setup 提示，`--strict` 下失败；未知名字由 `kit-doctor` 判为拼写错误。
+`run-checks.js` 会按启用层 / extension（`docs/design-spec/config.json` 的 `kit.layers`，缺省 `['base']`）跑 guard。汇总行带各 baseline 账本余额（`· baseline N`，来自账本文件 `totalEntries`——PASS ≠ 没债，「冻结存量只拦新增」的债务要有仪表盘）与 guard 挂账（`· warnings N`，解析 guard 的 `WARNINGS: n` 机器行），并在末尾给合计 `Σ` 行；`--json` 输出对应 `guards[].baseline` / `guards[].warnings` / `totals` 字段（additive，`jsonVersion` 不变）。未启用层的 guard 文件可以留在目录里，会被明确跳过；启用层缺文件会失败。Extension 只有被 `kit.layers` 点名时才会发现；已知 extension 目录缺失时普通模式给 setup 提示，`--strict` 下失败；未知名字由 `kit-doctor` 判为拼写错误。
 
 ## CI 与 Commit Gate
 
@@ -141,7 +141,7 @@ npm run hooks:install
 | 3 `check-changelog` | 检查更新日志结构、长度和索引一致性 | 无 |
 | 4 `check-orphan-css` | 检查定义了但没有使用的 CSS class | 有 |
 | 5 `check-i18n` | 检查运行时挂载、硬编码文案和死键 | 有 |
-| 6 `check-manifest` | 检查生成的 screen manifest 是否过 schema 且语义完整 | 无 |
+| 6 `check-manifest` | 检查生成的 screen manifest 是否过 schema 且语义完整；可选 `coverage` 对账设计屏覆盖缺口（warning 不 FAIL） | 无 |
 | 7 `check-deviation` | 检查代码偏离标记、偏离台账和 manifest 引用是否一致 | 无 |
 | ext `flutter-visual` | Flutter 实现栈视觉契约配置与 evidence 核对 | 无 |
 
@@ -168,3 +168,5 @@ npm run hooks:install
 ## 边界
 
 Design Spec Kit 只管规则、交接和检查。它不规定颜色、字体、组件形态、框架、目录结构或具体测试工具。
+
+消费仓在设计纪律 / 还原交接上遇到 guard 能力缺口时，通用规则应回流 kit 演进（新 guard 维度、新配置项、新 matcher），项目特化走消费仓 `config.json`（`customGuards` / 各 guard 配置）——不要在消费仓里另写平行检查脚本，那会让同类规则出现第二真源。kit 的多模块、design-sync、待登记队列、coverage 对账都来自消费仓摩擦回流。

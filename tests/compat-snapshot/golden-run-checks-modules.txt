@@ -72,14 +72,15 @@
 
 ════════ 汇总 ════════
   ✓ mobile-app/check-changelog  exit=0  RESULT: PASS
-  ✓ mobile-app/check-icons  exit=0  RESULT: PASS
-  ✓ mobile-app/check-orphan-css  exit=0  RESULT: PASS
-  ✓ mobile-app/check-tokens  exit=0  RESULT: PASS
+  ✓ mobile-app/check-icons  exit=0  RESULT: PASS  · baseline 0
+  ✓ mobile-app/check-orphan-css  exit=0  RESULT: PASS  · baseline 1
+  ✓ mobile-app/check-tokens  exit=0  RESULT: PASS  · baseline 4
   ✓ web-console/check-changelog  exit=0  RESULT: PASS
   ✓ web-console/check-deviation  exit=0  RESULT: PASS
   ✓ web-console/check-icons  exit=0  RESULT: PASS
   ✓ web-console/check-manifest  exit=0  RESULT: PASS
-  ✓ web-console/check-orphan-css  exit=0  RESULT: PASS
-  ✓ web-console/check-tokens  exit=0  RESULT: PASS
+  ✓ web-console/check-orphan-css  exit=0  RESULT: PASS  · baseline 1
+  ✓ web-console/check-tokens  exit=0  RESULT: PASS  · baseline 0
+  Σ baseline 债务合计 6 条（5 本账）
 
 RESULT: PASS

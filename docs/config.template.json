@@ -127,7 +127,14 @@
       "schemaPath": "docs/design-spec/screen-manifest.schema.json",
       "screensListPath": "docs/design-spec/screens.txt",
       "sourceManifestDir": "",
-      "sourceManifestSuffix": ".manifest.json"
+      "sourceManifestSuffix": ".manifest.json",
+      "coverage": {
+        "designRoot": "ui-design/apps/<module>",
+        "screenGlobs": ["pages/*.html"],
+        "exempt": [
+          { "source": "pages/legal.html", "note": "为何该设计屏不需要 manifest（note 必填）" }
+        ]
+      }
     },
     "check-deviation": {
       "implRoots": [],

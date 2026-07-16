@@ -50,10 +50,11 @@
 ════════ 汇总 ════════
   ✓ check-changelog  exit=0  RESULT: PASS
   ✓ check-deviation  exit=0  RESULT: PASS
-  ✓ check-icons  exit=0  RESULT: PASS
+  ✓ check-icons  exit=0  RESULT: PASS  · baseline 0
   ✓ check-manifest  exit=0  RESULT: PASS
-  ✓ check-orphan-css  exit=0  RESULT: PASS
-  ✓ check-tokens  exit=0  RESULT: PASS
+  ✓ check-orphan-css  exit=0  RESULT: PASS  · baseline 1
+  ✓ check-tokens  exit=0  RESULT: PASS  · baseline 4
   ✓ check-flutter-visual  exit=0  RESULT: PASS
+  Σ baseline 债务合计 5 条（3 本账）
 
 RESULT: PASS

@@ -59,6 +59,12 @@ if (existsSync(path.join(KIT_ROOT, 'tests/design-sync/run.js'))) {
   console.log('\n── design-sync engine unit ─────────────────────────────');
   console.log('· 跳过：tests/ 不随 bundle 分发（source-only 检查，kit 源仓 CI 才跑）');
 }
+if (existsSync(path.join(KIT_ROOT, 'tests/glob-semantics/run.js'))) {
+  run('coverage glob semantics unit', process.execPath, ['tests/glob-semantics/run.js']);
+} else {
+  console.log('\n── coverage glob semantics unit ─────────────────────────────');
+  console.log('· 跳过：tests/ 不随 bundle 分发（source-only 检查，kit 源仓 CI 才跑）');
+}
 run('bundle drift check', process.execPath, ['tools/build-bundle.js', '--check']);
 
 console.log('\nRESULT: PASS');

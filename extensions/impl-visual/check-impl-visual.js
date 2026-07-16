@@ -472,6 +472,12 @@ async function executeEvidence(validatedScreens) {
     const result = await runCommand(screen.command);
     if (result.code !== 0) {
       error(`${screen.id}: command 退出码 ${result.code}`);
+      // 失败诊断：CI 上看不到本地终端，把子进程输出尾部带进 guard 日志，别让排障只剩一个退出码
+      const tail = (result.output || '').split('\n').filter((l) => l.trim()).slice(-40);
+      if (tail.length > 0) {
+        reports.push(`      ┌ command 输出尾部（最后 ${tail.length} 行）：`);
+        for (const line of tail) reports.push(`      │ ${line}`);
+      }
     }
     // 匹配阶段防御：matcher 抛异常（如运行期才暴露的非法输入）转成 guard 级 FAIL，不裸崩
     const found = [];
@@ -571,8 +577,10 @@ if (errors.length > 0) {
   } else {
     console.log('  3. evidence 写测试用例名（或 {name, match, pattern}），command 的 reporter 满足所选 matcher 要求。');
   }
+  if (warnings.length > 0) console.log(`WARNINGS: ${warnings.length}`);
   console.log('\nRESULT: FAIL');
   process.exitCode = 1;
 } else {
+  if (warnings.length > 0) console.log(`WARNINGS: ${warnings.length}`);
   console.log('\nRESULT: PASS');
 }

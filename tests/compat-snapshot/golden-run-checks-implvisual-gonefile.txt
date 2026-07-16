@@ -12,10 +12,12 @@
 [check-impl-visual]   ✓ sample-screen: anchors=2 contracts=1 interactions=1 evidence=3
 [check-impl-visual]   · config-only 模式：未执行 实现命令；需要实现核对时加 --execute-impl
 [check-impl-visual]   ⚠ sample-screen: command 引用的文件不存在：fake-playwright-gone.js——测试文件改名/删除/路径拼错会让 evidence 永不核对；请修正 command
+[check-impl-visual] WARNINGS: 1
 
 [check-impl-visual] RESULT: PASS
 
 ════════ 汇总 ════════
-  ✓ check-impl-visual  exit=0  RESULT: PASS
+  ✓ check-impl-visual  exit=0  RESULT: PASS  · warnings 1
+  Σ warnings 合计 1
 
 RESULT: PASS

@@ -1,0 +1,70 @@
+聚合入口：启用层/扩展 [impl-visual]（--execute-impl） · 串跑 1 个 guard
+  · 跳过 check-changelog.js（未启用层 'base'）
+  · 跳过 check-deviation.js（未启用层 'handoff'）
+  · 跳过 check-i18n.js（未启用层 'i18n'）
+  · 跳过 check-icons.js（未启用层 'base'）
+  · 跳过 check-manifest.js（未启用层 'handoff'）
+  · 跳过 check-orphan-css.js（未启用层 'base'）
+  · 跳过 check-tokens.js（未启用层 'base'）
+
+── impl-visual/check-impl-visual.js ──────────────────────────────
+[check-impl-visual] impl-visual: errors 2 · warnings 0 · execute-impl
+[check-impl-visual]   ✓ sample-screen: anchors=2 contracts=1 interactions=1 evidence=3
+[check-impl-visual]   · execute sample-screen: node fake-playwright.js --reporter=list
+[check-impl-visual]       ┌ command 输出尾部（最后 40 行）：
+[check-impl-visual]       │ fake reporter noise line 12
+[check-impl-visual]       │ fake reporter noise line 13
+[check-impl-visual]       │ fake reporter noise line 14
+[check-impl-visual]       │ fake reporter noise line 15
+[check-impl-visual]       │ fake reporter noise line 16
+[check-impl-visual]       │ fake reporter noise line 17
+[check-impl-visual]       │ fake reporter noise line 18
+[check-impl-visual]       │ fake reporter noise line 19
+[check-impl-visual]       │ fake reporter noise line 20
+[check-impl-visual]       │ fake reporter noise line 21
+[check-impl-visual]       │ fake reporter noise line 22
+[check-impl-visual]       │ fake reporter noise line 23
+[check-impl-visual]       │ fake reporter noise line 24
+[check-impl-visual]       │ fake reporter noise line 25
+[check-impl-visual]       │ fake reporter noise line 26
+[check-impl-visual]       │ fake reporter noise line 27
+[check-impl-visual]       │ fake reporter noise line 28
+[check-impl-visual]       │ fake reporter noise line 29
+[check-impl-visual]       │ fake reporter noise line 30
+[check-impl-visual]       │ fake reporter noise line 31
+[check-impl-visual]       │ fake reporter noise line 32
+[check-impl-visual]       │ fake reporter noise line 33
+[check-impl-visual]       │ fake reporter noise line 34
+[check-impl-visual]       │ fake reporter noise line 35
+[check-impl-visual]       │ fake reporter noise line 36
+[check-impl-visual]       │ fake reporter noise line 37
+[check-impl-visual]       │ fake reporter noise line 38
+[check-impl-visual]       │ fake reporter noise line 39
+[check-impl-visual]       │ fake reporter noise line 40
+[check-impl-visual]       │ fake reporter noise line 41
+[check-impl-visual]       │ fake reporter noise line 42
+[check-impl-visual]       │ fake reporter noise line 43
+[check-impl-visual]       │ fake reporter noise line 44
+[check-impl-visual]       │ fake reporter noise line 45
+[check-impl-visual]       │ fake reporter noise line 46
+[check-impl-visual]       │ fake reporter noise line 47
+[check-impl-visual]       │ fake reporter noise line 48
+[check-impl-visual]       │ fake reporter noise line 49
+[check-impl-visual]       │ fake reporter noise line 50
+[check-impl-visual]       │ Error: expected anchor [data-design-id="sample-panel"] to be visible
+[check-impl-visual]   ✗ sample-screen: command 退出码 1
+[check-impl-visual]   ✗ sample-screen: 命令输出没有任何 evidence 命中；请确认 reporter 配置与 matcher 'playwright-list' 匹配
+
+[check-impl-visual] 修法：
+[check-impl-visual]   1. 在 docs/design-spec/config.json 中补齐 kit.layers 与 extensions.impl-visual.screens[]。
+[check-impl-visual]   2. 遵守默认 ValueKey(anchor)；只有旧 key 例外才写 anchors.<anchor>.byKey。
+[check-impl-visual]   3. evidence 写测试用例名（或 {name, match, pattern}），command 的 reporter 满足所选 matcher 要求。
+
+[check-impl-visual] RESULT: FAIL
+
+════════ 汇总 ════════
+  ✗ check-impl-visual  exit=1  RESULT: FAIL
+
+修法：上面标 ✗ 的逐个单跑 `<node> <kit>/extensions/impl-visual/check-impl-visual.js` 看详细违规再修
+
+RESULT: FAIL
