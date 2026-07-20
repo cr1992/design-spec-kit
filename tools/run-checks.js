@@ -281,7 +281,7 @@ function lastWarningsCount(out) {
 // 路径解析逐字镜像 guard 侧规则：模块模式只认模块级 baselinePath（不继承顶层，分账铁律），
 // 缺省 docs/design-spec/baselines/<module>/<guard>.baseline.json；单模块模式认顶层
 // guards.<g>.baselinePath，缺省 tools/<guard>.baseline.json。读不到 / 无 totalEntries → 不展示。
-const BASELINE_GUARDS = new Set(['check-tokens', 'check-icons', 'check-orphan-css', 'check-i18n']);
+const BASELINE_GUARDS = new Set(['check-tokens', 'check-icons', 'check-orphan-css', 'check-ghost-classes', 'check-i18n']);
 function pickGuardCfgFor(node, guard) {
   return node?.guards?.[guard] || node?.guards?.[`${guard}.js`] || {};
 }

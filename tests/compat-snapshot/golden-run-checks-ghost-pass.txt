@@ -8,6 +8,7 @@
 [check-ghost-classes] RESULT: PASS
 
 ════════ 汇总 ════════
-  ✓ check-ghost-classes  exit=0  RESULT: PASS
+  ✓ check-ghost-classes  exit=0  RESULT: PASS  · baseline 1
+  Σ baseline 债务合计 1 条（1 本账）
 
 RESULT: PASS

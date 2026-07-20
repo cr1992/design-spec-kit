@@ -16,7 +16,8 @@
 [check-ghost-classes] RESULT: FAIL
 
 ════════ 汇总 ════════
-  ✗ check-ghost-classes  exit=1  RESULT: FAIL
+  ✗ check-ghost-classes  exit=1  RESULT: FAIL  · baseline 1
+  Σ baseline 债务合计 1 条（1 本账）
 
 修法：上面标 ✗ 的逐个单跑 `<node> <kit>/tools/check-ghost-classes.js` 看详细违规再修
 

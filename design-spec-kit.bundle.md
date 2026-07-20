@@ -1,4 +1,4 @@
-# design-spec-kit · 单文件分发包（One-File Bundle）· v2.6.0
+# design-spec-kit · 单文件分发包（One-File Bundle）· v2.6.1
 #
 # 用途：当目标项目只能「一个个上传文件」、没有 git 时，只上传/粘贴本文件这一个即可。
 #
@@ -3244,7 +3244,7 @@ String _componentSignature(double value) => value.toStringAsFixed(4);
 ⟦FILE design-spec-kit/package.json⟧
 {
   "name": "design-spec-kit",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "private": true,
   "type": "module",
   "description": "设计纪律 + 还原交接套件（与平台无关）。guard 支持 node 直跑或无 shell 环境粘贴执行。",
@@ -7607,7 +7607,7 @@ function lastWarningsCount(out) {
 // 路径解析逐字镜像 guard 侧规则：模块模式只认模块级 baselinePath（不继承顶层，分账铁律），
 // 缺省 docs/design-spec/baselines/<module>/<guard>.baseline.json；单模块模式认顶层
 // guards.<g>.baselinePath，缺省 tools/<guard>.baseline.json。读不到 / 无 totalEntries → 不展示。
-const BASELINE_GUARDS = new Set(['check-tokens', 'check-icons', 'check-orphan-css', 'check-i18n']);
+const BASELINE_GUARDS = new Set(['check-tokens', 'check-icons', 'check-orphan-css', 'check-ghost-classes', 'check-i18n']);
 function pickGuardCfgFor(node, guard) {
   return node?.guards?.[guard] || node?.guards?.[`${guard}.js`] || {};
 }
@@ -7855,6 +7855,6 @@ if (presentCore.length === 0) {
 ⟦/FILE⟧
 
 ⟦FILE .design-spec-kit.version⟧
-2.6.0
+2.6.1
 ⟦/FILE⟧
 

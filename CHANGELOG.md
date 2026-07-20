@@ -3,6 +3,10 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.6.1 — 2026-07-20
+
+- [工具] `run-checks` 债务仪表盘 `BASELINE_GUARDS` 集合补 `check-ghost-classes`——v2.6.0 漏登记导致汇总行不显示该 guard 的 `· baseline N` 账本余额（消费仓实跑发现）。
+
 ## v2.6.0 — 2026-07-20
 
 - [guard] 新增 `check-ghost-classes`（可选层 `ghost-classes`）：使用面（`class="..."` 属性 / `className=` / `classList.add|remove|toggle|contains|replace` 字符串字面量）引用的 class 必须在样式真源（`cssRoots`）有定义，否则视为「幽灵类」——类名拼错 / 引用不存在的变体时样式静默回落基底，设计稿呈现即错、实现照抄错样（起源：hirobot 设计侧 `tag danger` 引用不存在的类回落 accent 蓝的双侧走样，设计侧 2026-07-20 先落本地 guard，本版吸收为通用能力）。与 `check-orphan-css` 互为镜像（orphan = 定义了没人用；ghost = 用了没人定义），复用其 brace-aware CSS 选择器解析（声明体 `.5` / `url(a.png)` / `@keyframes` 帧名不误当定义）与 baseline 惯例（首跑固化存量、之后只拦新增、`--write-baseline` 重固化、模块模式 baseline 强制分账 + 迁移防线）。HTML 类文件的 `<style>` 计入该文件局部定义；`<!-- -->` 与 `<script>` 内 JS 注释剥除后再扫（等长替换行号不漂）；JS 拼接碎片经合法 token 过滤跳过（漏报向盲区，与 orphan 的误报向互补）。配置键 `cssRoots` / `usageRoots` / `skipDirs` / `baselinePath`，多模块 profile 与 `DESIGN_SPEC_KIT_MODULE` 语义同其余 guard。
