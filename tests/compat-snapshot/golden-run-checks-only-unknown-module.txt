@@ -1,2 +1,2 @@
-✗ --only nope/check-tokens 未匹配到任何已发现 guard（core 存在：check-changelog, check-deviation, check-i18n, check-icons, check-manifest, check-orphan-css, check-tokens；enabled extensions：无）
+✗ --only nope/check-tokens 未匹配到任何已发现 guard（core 存在：check-changelog, check-deviation, check-ghost-classes, check-i18n, check-icons, check-manifest, check-orphan-css, check-tokens；enabled extensions：无）
 RESULT: FAIL

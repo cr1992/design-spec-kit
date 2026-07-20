@@ -81,6 +81,16 @@ Submodule 在消费仓 CI 里有两个高频坑，接入时就处理掉：
 
 需要配置：`pageRoots`、`codeRoots`、`runtimeHints`、`dictPaths`、`wrapperNames`。
 
+### Phase 2b：ghost-classes 层（可选，随时可加）
+
+拦「使用面引用了但样式真源没定义的 class」——类名拼错 / 引用不存在的变体时样式静默回落基底，设计稿呈现即错、实现照抄错样。与 `check-orphan-css` 互为镜像（orphan = 定义了没人用；ghost = 用了没人定义），无前置依赖，设计侧样式真源稳定后即可启用：
+
+```json
+{ "kit": { "layers": ["base", "ghost-classes"] } }
+```
+
+需要配置：`check-ghost-classes.cssRoots` / `usageRoots`。首跑固化 baseline（存量幽灵类 / 纯 JS 锚点类记账），之后只拦新增。
+
 ### Phase 3：handoff 层
 
 目标：让设计和实现可对账。

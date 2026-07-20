@@ -2,8 +2,10 @@
   · mobile-app: layers [base]
   · web-console: layers [base, handoff]
   · 跳过 mobile-app/check-deviation.js（未启用层 'handoff'）
+  · 跳过 mobile-app/check-ghost-classes.js（未启用层 'ghost-classes'）
   · 跳过 mobile-app/check-i18n.js（未启用层 'i18n'）
   · 跳过 mobile-app/check-manifest.js（未启用层 'handoff'）
+  · 跳过 web-console/check-ghost-classes.js（未启用层 'ghost-classes'）
   · 跳过 web-console/check-i18n.js（未启用层 'i18n'）
 
 ── mobile-app/check-changelog.js ──────────────────────────────

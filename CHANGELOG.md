@@ -3,6 +3,13 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.6.0 — 2026-07-20
+
+- [guard] 新增 `check-ghost-classes`（可选层 `ghost-classes`）：使用面（`class="..."` 属性 / `className=` / `classList.add|remove|toggle|contains|replace` 字符串字面量）引用的 class 必须在样式真源（`cssRoots`）有定义，否则视为「幽灵类」——类名拼错 / 引用不存在的变体时样式静默回落基底，设计稿呈现即错、实现照抄错样（起源：hirobot 设计侧 `tag danger` 引用不存在的类回落 accent 蓝的双侧走样，设计侧 2026-07-20 先落本地 guard，本版吸收为通用能力）。与 `check-orphan-css` 互为镜像（orphan = 定义了没人用；ghost = 用了没人定义），复用其 brace-aware CSS 选择器解析（声明体 `.5` / `url(a.png)` / `@keyframes` 帧名不误当定义）与 baseline 惯例（首跑固化存量、之后只拦新增、`--write-baseline` 重固化、模块模式 baseline 强制分账 + 迁移防线）。HTML 类文件的 `<style>` 计入该文件局部定义；`<!-- -->` 与 `<script>` 内 JS 注释剥除后再扫（等长替换行号不漂）；JS 拼接碎片经合法 token 过滤跳过（漏报向盲区，与 orphan 的误报向互补）。配置键 `cssRoots` / `usageRoots` / `skipDirs` / `baselinePath`，多模块 profile 与 `DESIGN_SPEC_KIT_MODULE` 语义同其余 guard。
+- [工具] `kit-registry` 增层 `ghost-classes`；`kit-doctor` 配置探针补 `check-ghost-classes.cssRoots`（dirlist）。
+- [文档] README（层说明 / 文件树 / guard 表 8）、`docs/ADOPTION.md`（Phase 2b）、`docs/config.template.json`、`CLAUDE.template.md` DoD 表同步。
+- [工程] compat-snapshot 新增 2 场景（`fixture-ghost-classes` 存量走 baseline PASS / `fixture-ghost-classes-fail` 新增幽灵类 FAIL），总计 34 场景；既有 golden 追加未启用层跳过行，与实现同 commit。
+
 ## v2.5.0 — 2026-07-16
 
 - [guard] `check-manifest` 新增可选 `coverage` 设计屏覆盖对账（⑥，report-only）：扫 `designRoot` + `screenGlobs` 收集设计屏源文件，与各 generated 的 `screen.source` 集合做差——设计屏尚无 manifest 逐条挂 **warning、非 FAIL**（④ `screensListPath` 守「清单里的屏都有 manifest」，本维守「设计源文件都进了 manifest 体系」，堵「清单手维护、新屏没人登记、覆盖面停滞无信号」的盲区）。`exempt`（`[{source, note}]`，note 必填 fail closed）豁免确定不建 manifest 的屏；exempt 失效（已覆盖 / 源文件已不存在）提醒清理。coverage 配置形态错误 / `designRoot` 不可读 / 任一 glob 零匹配 → **FAIL**（review 返工补齐：拼错的 glob 若静默通过会输出 `0/0` 假绿，与防漏目标相反）；不配置 `coverage` = 本维关闭、输出零变化。glob 语义（按路径段解析）：`*` 段内不跨 `/`，段级 `**` 匹配零或多个目录段（`**/x` 含根层 x、`a/**/b` 含 a/b、结尾 `/**` 含自身与任意深度），连续 `**` 段折叠（`**/**` ≡ `**`）；review 两轮返工——初版字符串替换把 `**` 编译成必须含 `/` 漏根层文件、二版非重叠替换漏相邻 globstar，终版段解析；语义用例冻结在 `tests/glob-semantics/run.js`（27 用例，接入 ci-check，source-only 不随 bundle）。目录遍历沿用 kit 双环境 walk 惯例与缺省 skipDirs（可 `coverage.skipDirs` 覆盖）。

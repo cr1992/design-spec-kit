@@ -1,0 +1,23 @@
+聚合入口：启用层/扩展 [ghost-classes] · 串跑 1 个 guard
+
+── check-ghost-classes.js ──────────────────────────────
+[check-ghost-classes] css defs: 3 classes (1 files) · usage面: 1 files · ghosts: 2
+[check-ghost-classes] baseline: 1 entries · removed: 0 · new: 1
+
+[check-ghost-classes] ✗ 1 处新增幽灵类（使用面引用了但样式真源零定义）：
+[check-ghost-classes]   pages/sample.html
+[check-ghost-classes]     L11  .danger
+
+[check-ghost-classes] 修法：
+[check-ghost-classes]   1. 类名拼错 / 引用了不存在的变体 → 改成样式真源里已有的类。
+[check-ghost-classes]   2. 确属新组件 / 新变体 → 先在样式真源定义再引用。
+[check-ghost-classes]   3. 纯 JS 锚点类 / 运行时注入类 → 确认后 args=['--write-baseline'] 收编并注明原因。
+
+[check-ghost-classes] RESULT: FAIL
+
+════════ 汇总 ════════
+  ✗ check-ghost-classes  exit=1  RESULT: FAIL
+
+修法：上面标 ✗ 的逐个单跑 `<node> <kit>/tools/check-ghost-classes.js` 看详细违规再修
+
+RESULT: FAIL

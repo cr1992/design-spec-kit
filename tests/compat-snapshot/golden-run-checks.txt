@@ -1,4 +1,5 @@
 聚合入口：启用层/扩展 [base, handoff, flutter-visual] · 串跑 7 个 guard
+  · 跳过 check-ghost-classes.js（未启用层 'ghost-classes'）
   · 跳过 check-i18n.js（未启用层 'i18n'）
 
 ── check-changelog.js ──────────────────────────────

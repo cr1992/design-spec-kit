@@ -212,6 +212,7 @@ async function checkGuardsPresent() {
 const PROBES = [
   { guard: 'check-tokens.js',     const: 'SCAN_ROOTS', key: 'scanRoots',       kind: 'dirlist' },
   { guard: 'check-orphan-css.js', const: 'CSS_ROOTS',  key: 'cssRoots',        kind: 'dirlist' },
+  { guard: 'check-ghost-classes.js', const: 'CSS_ROOTS', key: 'cssRoots',      kind: 'dirlist' },
   { guard: 'check-i18n.js',       const: 'DICT_PATHS', key: 'dictPaths',       kind: 'filelist' },
   { guard: 'check-deviation.js',  const: 'IMPL_ROOTS', key: 'implRoots',       kind: 'dirlist' },
   { guard: 'check-icons.js',      const: 'REGISTRY_SOURCES', key: 'registrySources', kind: 'filelist', optionalEmpty: true,

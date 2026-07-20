@@ -1,0 +1,14 @@
+{
+  "note": "已认证保留的幽灵类清单（存量 / 纯锚点 / 运行时注入类）——新增幽灵类应改代码而非扩容此表。",
+  "generatedAt": "2026-07-20",
+  "reason": "fixture stable asset",
+  "totalEntries": 1,
+  "files": {
+    "pages/sample.html": [
+      {
+        "line": 4,
+        "name": "js-hook"
+      }
+    ]
+  }
+}

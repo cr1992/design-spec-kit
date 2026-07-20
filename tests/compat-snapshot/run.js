@@ -31,6 +31,8 @@ const SCENARIOS = [
   { name: 'baseline 迁移防线（负向）', dir: 'fixture-migration', args: ['--only', 'check-tokens'], expectExit: 1, golden: 'golden-run-checks-migration.txt' },
   { name: '--only 未知模块 fail closed（负向）', dir: 'fixture-modules', args: ['--only', 'nope/check-tokens'], expectExit: 1, golden: 'golden-run-checks-only-unknown-module.txt' },
   { name: '空 modules 分节（负向）', dir: 'fixture-modules-empty', args: [], expectExit: 1, golden: 'golden-run-checks-modules-empty.txt' },
+  { name: 'ghost-classes 层正向（存量幽灵类走 baseline，PASS）', dir: 'fixture-ghost-classes', args: ['--only', 'check-ghost-classes'], expectExit: 0, golden: 'golden-run-checks-ghost-pass.txt' },
+  { name: 'ghost-classes 新增幽灵类（负向）', dir: 'fixture-ghost-classes-fail', args: ['--only', 'check-ghost-classes'], expectExit: 1, golden: 'golden-run-checks-ghost-fail.txt' },
   { name: 'customGuards 正向（RESULT: PASS）', dir: 'fixture-custom-guards', args: ['--only', 'project-echo'], expectExit: 0, golden: 'golden-run-checks-custom-pass.txt' },
   { name: 'customGuards 否决语义（exit 0 + RESULT: FAIL，负向）', dir: 'fixture-custom-guards', args: ['--only', 'project-veto'], expectExit: 1, golden: 'golden-run-checks-custom-veto.txt' },
   { name: 'customGuards 不可翻案（exit 非零 + RESULT: PASS，负向）', dir: 'fixture-custom-guards', args: ['--only', 'project-liar'], expectExit: 1, golden: 'golden-run-checks-custom-liar.txt' },

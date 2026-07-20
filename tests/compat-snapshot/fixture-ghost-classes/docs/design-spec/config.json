@@ -1,0 +1,21 @@
+{
+  "kit": {
+    "layers": [
+      "ghost-classes"
+    ]
+  },
+  "guards": {
+    "check-ghost-classes": {
+      "cssRoots": [
+        "design"
+      ],
+      "usageRoots": [
+        "pages"
+      ],
+      "skipDirs": [
+        "node_modules"
+      ],
+      "baselinePath": "docs/design-spec/baselines/check-ghost-classes.baseline.json"
+    }
+  }
+}

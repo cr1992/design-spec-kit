@@ -6,7 +6,7 @@
     "layers": [
       "base"
     ],
-    "notes": "业务仓在这里配置已启用层 / extension；submodule 内源码保持只读。可选层：i18n、handoff。可选 extension：flutter-visual。"
+    "notes": "业务仓在这里配置已启用层 / extension；submodule 内源码保持只读。可选层：i18n、ghost-classes、handoff。可选 extension：flutter-visual。"
   },
   "extensions": {
     "flutter-visual": {
@@ -100,6 +100,20 @@
         "."
       ],
       "baselinePath": "docs/design-spec/baselines/check-orphan-css.baseline.json"
+    },
+    "check-ghost-classes": {
+      "cssRoots": [
+        "styles",
+        "css",
+        "design-system"
+      ],
+      "usageRoots": [
+        "pages",
+        "src",
+        "components",
+        "."
+      ],
+      "baselinePath": "docs/design-spec/baselines/check-ghost-classes.baseline.json"
     },
     "check-i18n": {
       "pageRoots": [

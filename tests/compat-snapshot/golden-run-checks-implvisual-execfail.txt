@@ -1,6 +1,7 @@
 聚合入口：启用层/扩展 [impl-visual]（--execute-impl） · 串跑 1 个 guard
   · 跳过 check-changelog.js（未启用层 'base'）
   · 跳过 check-deviation.js（未启用层 'handoff'）
+  · 跳过 check-ghost-classes.js（未启用层 'ghost-classes'）
   · 跳过 check-i18n.js（未启用层 'i18n'）
   · 跳过 check-icons.js（未启用层 'base'）
   · 跳过 check-manifest.js（未启用层 'handoff'）

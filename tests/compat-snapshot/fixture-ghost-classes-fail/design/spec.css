@@ -1,0 +1,5 @@
+/* fixture 样式真源（注释里的 .comment-ghost 不算定义） */
+.tag { color: var(--fg); }
+.tag.bad { color: var(--danger-fg); }
+@media (max-width: 500px) { .tag-sm { font-size: 12px; } }
+@keyframes pulse { from { opacity: .5; } to { opacity: 1; } }

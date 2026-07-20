@@ -1,0 +1,13 @@
+聚合入口：启用层/扩展 [ghost-classes] · 串跑 1 个 guard
+
+── check-ghost-classes.js ──────────────────────────────
+[check-ghost-classes] css defs: 3 classes (1 files) · usage面: 1 files · ghosts: 1
+[check-ghost-classes] baseline: 1 entries · removed: 0 · new: 0
+[check-ghost-classes] ✓ check-ghost-classes: 0 新增 · 0 减少 · baseline 保持不变
+
+[check-ghost-classes] RESULT: PASS
+
+════════ 汇总 ════════
+  ✓ check-ghost-classes  exit=0  RESULT: PASS
+
+RESULT: PASS

@@ -1,0 +1,11 @@
+<style>.local-only { color: red; }</style>
+<!-- <div class="commented-out-ghost">注释内引用不计</div> -->
+<div class="tag bad tag-sm local-only"></div>
+<div class="js-hook">存量纯锚点类（已收 baseline）</div>
+<script>
+  // el.classList.add("comment-ghost") 注释内不计
+  el.classList.add("tag");
+  el.className = "tag bad";
+  frag = "tag-" + suffix;   // 拼接碎片跳过
+</script>
+<div class="tag danger">新增幽灵类：spec 只有 .tag.bad</div>

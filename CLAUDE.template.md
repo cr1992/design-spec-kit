@@ -76,6 +76,7 @@
 |---|---|---|
 | `tokens.css` 加 / 改 token | 同步 `DESIGN-REF.md` Token 速查表 | 人 |
 | 新增 / 改 / 删可复用组件 | 登记 / 更新 `DESIGN-REF.md` 组件目录；**删组件同步删 CSS 或进「保留备查」baseline** | 人 + 🤖 `check-orphan-css.js` |
+| 页面 / 脚本里**引用 class**（项目启用 ghost-classes 层时） | 只引用样式真源已定义的类；新变体先定义再用，勿拼不存在的类名 | 🤖 `check-ghost-classes.js` |
 | 改了**颜色 / 尺寸**值 | 颜色一律 `var(--*)`；字号 / 间距 / 圆角 / 阴影走 token 档 | 🤖 `check-tokens.js` |
 | 新增 / 改**图标** | 加进单一图标库 + 登记 DESIGN-REF；勿 per-file 重画 / 复制字形 | 🤖 `check-icons.js` |
 | 新增页面 / 改**用户可见文案**（项目有 i18n 时） | 页面挂 i18n 运行时；文案走词典键，勿硬编码 | 🤖 `check-i18n.js` |

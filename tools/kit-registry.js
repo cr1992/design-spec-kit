@@ -4,6 +4,7 @@
 export const LAYER_GUARDS = {
   base: ['check-tokens.js', 'check-icons.js', 'check-changelog.js', 'check-orphan-css.js'],
   i18n: ['check-i18n.js'],
+  'ghost-classes': ['check-ghost-classes.js'],
   handoff: ['check-manifest.js', 'check-deviation.js'],
 };
 
