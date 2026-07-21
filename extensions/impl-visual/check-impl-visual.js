@@ -13,10 +13,13 @@
  *     逐条挂 warning——设计 sync 带回新屏时立即可见，实现落地后补登记销账。
  *     manifestDir 为显式配置（extension 级或 check-manifest guard）但目录不可读 = 配置错误 FAIL；
  *     只有缺省回退路径不存在才静默跳过（该模块未接 handoff 生成物）
- *   - evidence 静态核对（warning，非 FAIL，仅 config-only）：从 command 解析源文件，
+ *   - evidence 静态核对（v2.7.0 起默认 FAIL，仅 config-only）：从 command 解析源文件，
  *     非 regex 的 evidence name 归一化后必须能在源文件里找到——测试改名断链
- *     不用等 --execute-impl 才暴露；command 里显式引用的文件不存在也挂 warning，
- *     只有解析不出任何文件 token（make target 等）才静默跳过
+ *     不用等 --execute-impl 才暴露；command 里显式引用的文件不存在同级 FAIL，
+ *     只有解析不出任何文件 token（make target 等）才静默跳过。
+ *     背景（sproboagent voice-command 复盘）：evidence 描述的行为已从实现里消失、
+ *     guard 仍 PASS，warning 被当背景噪音——静态失配就是还原漂移信号，必须拦提交。
+ *     迁移期可用 extensions.<name>.staticEvidence: "warn" 显式降级（默认 "fail"）。
  *
  * 传入 --execute-impl 时才运行项目声明的 command，用 matcher 从输出中核对 evidence。
  *
@@ -368,14 +371,17 @@ async function resolveCommandFiles(command) {
 // 归一化：剥转义反斜杠 + 去空白/引号——容忍源码里字符串换行拼接与引号转义
 const normalizeForSource = (s) => s.replace(/\\/g, '').replace(/['"`\s]+/g, '');
 
-async function staticEvidenceCheck(validatedScreens) {
+async function staticEvidenceCheck(validatedScreens, level) {
+  // v2.7.0：静态失配默认 FAIL——evidence 与实现脱节 = 还原漂移信号，不再降噪成 warning。
+  // 迁移期项目可在 extensions.<name>.staticEvidence 写 "warn" 显式降级。
+  const report = level === 'warn' ? warn : error;
   for (const item of validatedScreens) {
     if (!item || item.evidence.length === 0 || !item.matcher) continue;
     const { screen, evidence, matcher } = item;
     if (typeof screen.command !== 'string' || !screen.command.trim()) continue;
     const { files, missing } = await resolveCommandFiles(screen.command);
     if (missing.length > 0) {
-      warn(`${screen.id}: command 引用的文件不存在：${missing.join(', ')}——测试文件改名/删除/路径拼错会让 evidence 永不核对；请修正 command`);
+      report(`${screen.id}: command 引用的文件不存在：${missing.join(', ')}——测试文件改名/删除/路径拼错会让 evidence 永不核对；请修正 command`);
     }
     if (files.length === 0) continue; // 解析不出任何存在的源文件（如 make target），静态核对不适用
     let haystack = '';
@@ -388,7 +394,7 @@ async function staticEvidenceCheck(validatedScreens) {
       const effectiveKey = e.match ?? matcher.key;
       if (effectiveKey === 'regex' || e.pattern != null) continue; // regex/pattern 语义面向运行输出，静态跳过
       if (!haystack.includes(normalizeForSource(e.name))) {
-        warn(`${screen.id}: evidence '${e.name}' 未出现在测试源码（${files.map((f) => path.relative(PROJECT_ROOT, f)).join(', ')}）——测试改名会静默断链；改名请同步 config，动态拼接的用例名可为该条改用 regex matcher`);
+        report(`${screen.id}: evidence '${e.name}' 未出现在测试源码（${files.map((f) => path.relative(PROJECT_ROOT, f)).join(', ')}）——测试改名会静默断链；改名请同步 config，动态拼接的用例名可为该条改用 regex matcher`);
       }
     }
   }
@@ -539,6 +545,12 @@ async function main() {
     error(`extensions.${EXTENSION_NAME}.screens 为空；启用 extension 后至少声明一个 screen，或从 kit.layers 移除 '${EXTENSION_NAME}'`);
     return;
   }
+  // 静态核对级别：缺省 fail；只认 'warn' | 'fail'，其余值按配置错误 fail closed
+  const staticLevel = extConfig.staticEvidence ?? 'fail';
+  if (staticLevel !== 'warn' && staticLevel !== 'fail') {
+    error(`extensions.${EXTENSION_NAME}.staticEvidence='${staticLevel}' 未知（只认 'warn' | 'fail'，缺省 'fail'）`);
+    return;
+  }
 
   const validated = [];
   for (const screen of extConfig.screens) {
@@ -556,7 +568,7 @@ async function main() {
   } else if (!EXECUTE_IMPL) {
     reports.push(`  · config-only 模式：未执行 ${IMPL_LABEL}；需要实现核对时加 --execute-impl`);
     if (errors.length === 0) {
-      await staticEvidenceCheck(validated);
+      await staticEvidenceCheck(validated, staticLevel);
     }
   }
 }

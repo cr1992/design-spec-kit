@@ -12,7 +12,7 @@
 [check-impl-visual] impl-visual: errors 1 · warnings 0 · config-only
 [check-impl-visual]   ✓ sample-screen: anchors=2 contracts=1 interactions=1 evidence=3
 [check-impl-visual]   · config-only 模式：未执行 实现命令；需要实现核对时加 --execute-impl
-[check-impl-visual]   ✗ sample-screen: command 引用的文件不存在：fake-playwright-gone.js——测试文件改名/删除/路径拼错会让 evidence 永不核对；请修正 command
+[check-impl-visual]   ✗ sample-screen: evidence 'sample panel dismisses on backdrop tap' 未出现在测试源码（fake-playwright.js）——测试改名会静默断链；改名请同步 config，动态拼接的用例名可为该条改用 regex matcher
 
 [check-impl-visual] 修法：
 [check-impl-visual]   1. 在 docs/design-spec/config.json 中补齐 kit.layers 与 extensions.impl-visual.screens[]。

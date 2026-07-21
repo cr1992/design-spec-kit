@@ -28,7 +28,9 @@ if (typeof readFile !== 'function') {
  *        · 台账 open、代码无标记          → FAIL「幽灵条目」
  *        · 台账 收编/摘除，代码标记还在    → FAIL「该摘标」
  *        · 台账屏引用无对应 manifest       → FAIL「屏引用无效」（manifest 目录存在时才查）
- *   ⑤ manifest（目录存在时）：delegated status=open 计数 + contract_ref=TBD 计数 → WARN「待裁决队列」
+ *   ⑤ manifest（目录存在时）：delegated status=open 计数 + contract_ref=TBD 计数 → WARN「待裁决队列」；
+ *      其中 contract_ref 指向的契约文件已在树内的 open 条目 → FAIL「契约已入树仍 open」
+ *      （v2.7.0 裁决期限规则：契约冻结即须转正或写 DEV 行，不许挂 open 变背景噪音）
  *
  * 怎么跑：
  *   · AI 沙箱：read_file 本文件 → 整段粘进 run_script（helper：readFile/ls/log）。
@@ -163,6 +165,19 @@ function parseLedger(src) {
 
 // ─── manifest 待裁决队列摘要 ───────────────────────────────────
 
+// contract_ref 是自由文本；抠出「带 / 且带扩展名」的路径样 token，用于契约入树探测。
+// 惯例：`path#fragment` = 引用文件内的子段/扩展位（子契约未冻结，如 VCE-3 确认流、
+// EXT-NC1 固件扩展）——文件在树内不等于该子段已冻结，不触发裁决期限。
+function pathTokensOf(ref) {
+  if (typeof ref !== 'string') return [];
+  const out = [];
+  for (const m of ref.matchAll(/(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9]+/g)) {
+    if (ref[m.index + m[0].length] === '#') continue;
+    out.push(m[0]);
+  }
+  return out;
+}
+
 async function manifestQueue() {
   let names;
   try { names = await ls(MANIFEST_DIR); } catch { return null; }
@@ -170,19 +185,33 @@ async function manifestQueue() {
   const files = names.filter((n) => n.endsWith(MANIFEST_SUFFIX));
   let openDelegated = 0, tbd = 0;
   const screenIds = new Set();
+  // v2.7.0 裁决期限规则：delegated 仍 open，但 contract_ref 指向的契约文件已在树内
+  // ——契约冻结即裁决期限到，设计须转正（status: reconciled + version+1）或实现侧写 DEV 行。
+  // 背景（sproboagent voice-command 复盘）：契约合入后 delegated 一直挂 open，
+  // WARN 挂成背景噪音，实现按契约先行、设计静默落后——从此这里 FAIL。
+  const frozenOpen = [];
   for (const f of files) {
-    screenIds.add(f.slice(0, -MANIFEST_SUFFIX.length));                  // 文件名基底当兜底 id
+    const baseId = f.slice(0, -MANIFEST_SUFFIX.length);                  // 文件名基底当兜底 id
+    screenIds.add(baseId);
     let m;
     try { m = JSON.parse(await readFile(`${MANIFEST_DIR}/${f}`)); } catch { continue; }
-    if (m && m.screen && typeof m.screen.id === 'string') screenIds.add(m.screen.id);
+    const screenId = (m && m.screen && typeof m.screen.id === 'string') ? m.screen.id : baseId;
+    screenIds.add(screenId);
     const del = (m && m.states && m.states.delegated) || [];
     if (!Array.isArray(del)) continue;
     for (const d of del) {
-      if (d && d.status === 'open') openDelegated++;
+      if (d && d.status === 'open') {
+        openDelegated++;
+        for (const p of pathTokensOf(d.contract_ref)) {
+          let exists = false;
+          try { await readFile(p); exists = true; } catch { /* 不在树内 → 仍属待裁决 WARN */ }
+          if (exists) { frozenOpen.push({ screen: screenId, state: d.state, path: p }); break; }
+        }
+      }
       if (d && d.contract_ref === 'TBD') tbd++;
     }
   }
-  return { files: files.length, openDelegated, tbd, screenIds };
+  return { files: files.length, openDelegated, tbd, screenIds, frozenOpen };
 }
 
 // ─── Main（早退避免深嵌）───────────────────────────────────────
@@ -245,10 +274,11 @@ async function main() {
   }
 
   // ─── 报告 ───
-  const gapCount = noBasis.length + noId.length + undeclared.length + ghosts.length + shouldUnmark.length + badScreenRefs.length;
+  const frozenOpen = (queue && queue.frozenOpen) || [];
+  const gapCount = noBasis.length + noId.length + undeclared.length + ghosts.length + shouldUnmark.length + badScreenRefs.length + frozenOpen.length;
   log(`scanned ${uniqFiles.length} files · ${markers.size} markers · ledger ${ledgerReadOk ? ledger.size + ' rows' : '读不到'} · gaps ${gapCount}`);
   if (!ledgerReadOk) log(`\n⚠ 台账读不到：${LEDGER_PATH}（视为空台账——凡有标记都会记「未申报」）`);
-  if (queue) log(`\nℹ 待裁决队列（manifest ${queue.files} 份）：delegated open ${queue.openDelegated} · contract_ref=TBD ${queue.tbd}（随迭代评审收敛，非 FAIL）`);
+  if (queue) log(`\nℹ 待裁决队列（manifest ${queue.files} 份）：delegated open ${queue.openDelegated} · contract_ref=TBD ${queue.tbd}（契约未入树的随迭代评审收敛，非 FAIL）`);
   if (gapCount === 0) {
     log(`\n✓ check-deviation: 代码标记 ↔ 台账双向、台账 ↔ manifest 屏引用全部对齐，无缺口`);
     log(`\nRESULT: PASS`);
@@ -272,13 +302,19 @@ async function main() {
     log(`\n✗ ${title}：${arr.length}`);
     for (const x of arr) log(fmt(x));
   }
+  if (frozenOpen.length > 0) {
+    log(`\n✗ 契约已入树仍 open（裁决期限到）：${frozenOpen.length}`);
+    for (const x of frozenOpen) log(`    屏=${x.screen}  delegated=${x.state}  契约=${x.path}`);
+  }
 
   return fatal([`\n修法：`,
     `  · 未申报 → 台账 ${LEDGER_PATH} 补一行（id/屏/anchor/kind/basis/状态=open）。`,
     `  · 幽灵条目 → 代码补 @design-deviation 标记（+ runtime anchor），或该条走「摘除」出口。`,
     `  · 该摘标 → 收编/摘除后须摘掉代码里的 @design-deviation 标与 runtime deviation anchor。`,
     `  · 缺 basis / 坏标记 → 补 basis:<契约或任务引用>，或直接摘除（写不出依据的偏离不留）。`,
-    `  · 屏引用无效 → 修台账屏列的 screen-id 笔误，或给该屏补 manifest（屏还没进交接层就别在台账引用它）。`]);
+    `  · 屏引用无效 → 修台账屏列的 screen-id 笔误，或给该屏补 manifest（屏还没进交接层就别在台账引用它）。`,
+    `  · 契约已入树仍 open → 设计侧按契约转正该 delegated（status: reconciled + version+1），`,
+    `    或实现按契约先行时在台账写 DEV 行 + 代码打 @design-deviation 标——契约冻结后不许再挂 open。`]);
 }
 
 await main();

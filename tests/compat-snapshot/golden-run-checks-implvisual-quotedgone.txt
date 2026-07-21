@@ -9,16 +9,21 @@
   · 跳过 check-tokens.js（未启用层 'base'）
 
 ── impl-visual/check-impl-visual.js ──────────────────────────────
-[check-impl-visual] impl-visual: errors 0 · warnings 1 · config-only
+[check-impl-visual] impl-visual: errors 1 · warnings 0 · config-only
 [check-impl-visual]   ✓ sample-screen: anchors=2 contracts=1 interactions=1 evidence=3
 [check-impl-visual]   · config-only 模式：未执行 实现命令；需要实现核对时加 --execute-impl
-[check-impl-visual]   ⚠ sample-screen: command 引用的文件不存在：fake-playwright-gone.js——测试文件改名/删除/路径拼错会让 evidence 永不核对；请修正 command
-[check-impl-visual] WARNINGS: 1
+[check-impl-visual]   ✗ sample-screen: command 引用的文件不存在：fake-playwright-gone.js——测试文件改名/删除/路径拼错会让 evidence 永不核对；请修正 command
 
-[check-impl-visual] RESULT: PASS
+[check-impl-visual] 修法：
+[check-impl-visual]   1. 在 docs/design-spec/config.json 中补齐 kit.layers 与 extensions.impl-visual.screens[]。
+[check-impl-visual]   2. 遵守默认 ValueKey(anchor)；只有旧 key 例外才写 anchors.<anchor>.byKey。
+[check-impl-visual]   3. evidence 写测试用例名（或 {name, match, pattern}），command 的 reporter 满足所选 matcher 要求。
+
+[check-impl-visual] RESULT: FAIL
 
 ════════ 汇总 ════════
-  ✓ check-impl-visual  exit=0  RESULT: PASS  · warnings 1
-  Σ warnings 合计 1
+  ✗ check-impl-visual  exit=1  RESULT: FAIL
 
-RESULT: PASS
+修法：上面标 ✗ 的逐个单跑 `<node> <kit>/extensions/impl-visual/check-impl-visual.js` 看详细违规再修
+
+RESULT: FAIL

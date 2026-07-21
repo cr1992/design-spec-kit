@@ -1,0 +1,30 @@
+聚合入口：模块 [web-console] · 串跑 1 个 guard
+  · web-console: layers [handoff]
+
+── web-console/check-deviation.js ──────────────────────────────
+[web-console/check-deviation] scanned 1 files · 1 markers · ledger 1 rows · gaps 1
+
+[web-console/check-deviation] ℹ 待裁决队列（manifest 1 份）：delegated open 2 · contract_ref=TBD 0（契约未入树的随迭代评审收敛，非 FAIL）
+
+[web-console/check-deviation] ──── 缺口清单 ────
+
+[web-console/check-deviation] ✗ 契约已入树仍 open（裁决期限到）：1
+[web-console/check-deviation]     屏=console-home  delegated=offline  契约=docs/sample-api.yaml
+
+[web-console/check-deviation] 修法：
+[web-console/check-deviation]   · 未申报 → 台账 docs/design-spec/DEVIATION-LEDGER.md 补一行（id/屏/anchor/kind/basis/状态=open）。
+[web-console/check-deviation]   · 幽灵条目 → 代码补 @design-deviation 标记（+ runtime anchor），或该条走「摘除」出口。
+[web-console/check-deviation]   · 该摘标 → 收编/摘除后须摘掉代码里的 @design-deviation 标与 runtime deviation anchor。
+[web-console/check-deviation]   · 缺 basis / 坏标记 → 补 basis:<契约或任务引用>，或直接摘除（写不出依据的偏离不留）。
+[web-console/check-deviation]   · 屏引用无效 → 修台账屏列的 screen-id 笔误，或给该屏补 manifest（屏还没进交接层就别在台账引用它）。
+[web-console/check-deviation]   · 契约已入树仍 open → 设计侧按契约转正该 delegated（status: reconciled + version+1），
+[web-console/check-deviation]     或实现按契约先行时在台账写 DEV 行 + 代码打 @design-deviation 标——契约冻结后不许再挂 open。
+
+[web-console/check-deviation] RESULT: FAIL
+
+════════ 汇总 ════════
+  ✗ web-console/check-deviation  exit=1  RESULT: FAIL
+
+修法：上面标 ✗ 的逐个单跑 `<node> <kit>/tools/check-deviation.js` 看详细违规再修
+
+RESULT: FAIL

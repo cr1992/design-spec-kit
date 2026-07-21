@@ -59,7 +59,7 @@ node tools/run-checks.js --execute-impl
 
 - **待登记队列**：manifestDir 下的 `*.manifest.generated.json` 若未在 `screens[]` 登记、也不在 `exempt` 里，逐条挂 warning——设计 sync 带回新屏当下挂账，实现落地补 `command` + `evidence` 销账。manifestDir 解析优先级：`extensions.<name>.manifestDir` > `check-manifest` guard 配置（模块键覆盖顶层）> 默认 `docs/manifests`。**显式配置指向不可读目录 = 配置错误 FAIL**；缺省回退仅 ENOENT（该模块未接 handoff 生成物）静默跳过，ENOTDIR / EACCES 等其余异常同样 FAIL。
 - **exempt 豁免**：`extensions.<name>.exempt = [{ "id", "note" }]`，note 必填——**缺 note 按配置错误 FAIL**。条目失效（已登记 / 无对应生成物）挂 warning 提醒清理。
-- **evidence 静态核对**（仅 config-only）：从 command 解析源文件（轻量 shell-word lexer：支持单/双引号、`\` 转义与带空格路径，未引号的 `&&`/`;`/`|` 分段，跟踪 `cd`；带字母开头扩展名的词即候选），非 regex 的 evidence name 归一化（剥 `\`、去空白/引号）后须在源码中出现，缺失挂 warning。**command 显式引用的文件不存在也挂 warning**（改名/删除/拼错路径不再静默）；只有解析不出任何文件 token（make target 等）才跳过。动态拼接的用例名为该条改用 `regex` matcher 即可豁免。
+- **evidence 静态核对**（仅 config-only；v2.7.0 起默认 **FAIL**）：从 command 解析源文件（轻量 shell-word lexer：支持单/双引号、`\` 转义与带空格路径，未引号的 `&&`/`;`/`|` 分段，跟踪 `cd`；带字母开头扩展名的词即候选），非 regex 的 evidence name 归一化（剥 `\`、去空白/引号）后须在源码中出现，缺失即 FAIL——evidence 与实现脱节 = 还原漂移信号，不再降噪成 warning。**command 显式引用的文件不存在同级 FAIL**（改名/删除/拼错路径不再静默）；只有解析不出任何文件 token（make target 等）才跳过。动态拼接的用例名为该条改用 `regex` matcher 即可豁免；迁移期可在 `extensions.<name>.staticEvidence` 写 `"warn"` 显式降级（缺省 `"fail"`，未知值 fail closed）。
 
 ## Web 栈（Playwright）IMPL-PROFILE 要点
 

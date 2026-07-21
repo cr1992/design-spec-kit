@@ -3,6 +3,12 @@
 > 这是 kit 仓自己的变更日志；给使用方项目的 changelog 骨架在 `docs/CHANGELOG.template.md`，别混淆。
 > 升级实例前先读这里的破坏性变更标注（⚠）。
 
+## v2.7.0 — 2026-07-21
+
+- [guard] ⚠ `impl-visual` evidence 静态核对从 warning 升 **FAIL**（含「command 引用的文件不存在」）：evidence 描述的行为已从实现消失、guard 仍 PASS，warning 被当背景噪音——静态失配就是还原漂移信号（起源：sproboagent voice-command 复盘——HAPP-86 契约切换后 3 条 evidence 失配挂 warning 三天无人问，实现与设计语义已分叉仍「7 guards 全 PASS」）。迁移期可在 `extensions.<name>.staticEvidence` 写 `"warn"` 显式降级（缺省 `"fail"`；未知值 fail closed）。
+- [guard] ⚠ `check-deviation` 新增「契约已入树仍 open」FAIL（裁决期限规则）：manifest delegated `status: open` 且 `contract_ref` 里路径样 token 指向树内已存在文件时，视为契约已冻结、裁决期限到——设计侧须按契约转正（`reconciled` + version+1），或实现按契约先行时写 DEV 行 + 代码标记；不许挂 open 变背景噪音。契约未入树（含 `TBD`）仍走 WARN 待裁决队列（ℹ 行措辞同步为「契约未入树的随迭代评审收敛」）。**`path#fragment` 惯例**：引用文件内子段/扩展位（子契约未冻结，如确认流 token 段、固件扩展位 EXT-*）不触发裁决期限——文件在树内 ≠ 该子段已冻结；等整份契约的写裸路径，等子段的写 `#fragment` 并在 note 说明（hirobot voice-command `vce3-confirm-flow` / net-change `firmware-live` 校准实例）。
+- [工程] compat-snapshot 新增 2 场景（`fixture-impl-visual-staticfail` 静态失配默认 FAIL / `fixture-deviation-frozen` 契约入树仍 open FAIL），`fixture-impl-visual-pending` 改为 `staticEvidence: "warn"` 降级回归覆盖，`gonefile` / `quotedgone` 期望翻转为 FAIL，总计 36 场景。
+
 ## v2.6.1 — 2026-07-20
 
 - [工具] `run-checks` 债务仪表盘 `BASELINE_GUARDS` 集合补 `check-ghost-classes`——v2.6.0 漏登记导致汇总行不显示该 guard 的 `· baseline N` 账本余额（消费仓实跑发现）。

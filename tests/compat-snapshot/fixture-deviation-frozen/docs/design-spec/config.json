@@ -1,0 +1,21 @@
+{
+  "kit": { "layers": [] },
+  "modules": {
+    "web-console": {
+      "layers": ["handoff"],
+      "guards": {
+        "check-manifest": {
+          "manifestDir": "docs/design-spec/manifests",
+          "schemaPath": "docs/design-spec/screen-manifest.schema.json",
+          "sourceManifestDir": "design-b/docs/manifests",
+          "sourceManifestSuffix": ".manifest.json"
+        },
+        "check-deviation": {
+          "implRoots": ["impl-b"],
+          "ledgerPath": "docs/design-spec/DEVIATION-LEDGER.md",
+          "manifestDir": "docs/design-spec/manifests"
+        }
+      }
+    }
+  }
+}

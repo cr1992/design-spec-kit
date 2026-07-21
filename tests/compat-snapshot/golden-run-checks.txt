@@ -13,7 +13,7 @@
 ── check-deviation.js ──────────────────────────────
 [check-deviation] scanned 1 files · 1 markers · ledger 1 rows · gaps 0
 
-[check-deviation] ℹ 待裁决队列（manifest 1 份）：delegated open 1 · contract_ref=TBD 0（随迭代评审收敛，非 FAIL）
+[check-deviation] ℹ 待裁决队列（manifest 1 份）：delegated open 1 · contract_ref=TBD 0（契约未入树的随迭代评审收敛，非 FAIL）
 
 [check-deviation] ✓ check-deviation: 代码标记 ↔ 台账双向、台账 ↔ manifest 屏引用全部对齐，无缺口
 

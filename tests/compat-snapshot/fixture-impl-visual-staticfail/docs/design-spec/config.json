@@ -3,7 +3,6 @@
   "extensions": {
     "impl-visual": {
       "manifestDir": "docs/design-spec/manifests",
-      "staticEvidence": "warn",
       "screens": [
         {
           "id": "sample-screen",
@@ -16,10 +15,6 @@
             { "name": "panel motion timing", "match": "regex", "pattern": "animated presentation \\(\\d+ms\\)" }
           ]
         }
-      ],
-      "exempt": [
-        { "id": "static-screen", "note": "纯静态说明页，无实现侧交互，不做实现核对" },
-        { "id": "gone-screen", "note": "早期屏，已从设计稿移除" }
       ]
     }
   }
